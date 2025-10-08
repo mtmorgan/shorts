@@ -5,8 +5,6 @@
 
 <Styles />
 
-<NavigationBar />
-
 <Container sm>
 	<h1>P5 Shorts</h1>
 	<ListGroup>

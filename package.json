@@ -34,6 +34,7 @@
 		"p5": "^2.0.5",
 		"p5-svelte": "^3.1.2",
 		"sveaflet": "^0.1.4",
-		"svelte-maplibre-gl": "^1.0.1"
+		"svelte-maplibre-gl": "^1.0.1",
+		"vite-plugin-mkcert": "^1.17.9"
 	}
 }
