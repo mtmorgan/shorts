@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { onMount } from 'svelte';
 	import P5, { type Sketch } from 'p5-svelte';
 
 	let clientWidth: number;
@@ -62,7 +61,7 @@
 			d.x = scale(d.GPSLongitude, longitudeRange, width);
 			d.y = height - scale(d.GPSLatitude, latitudeRange, height);
 		});
-	}
+	};
 
 	const range = (x: number[]): [number, number] => {
 		return [Math.min(...x), Math.max(...x)];
@@ -75,12 +74,17 @@
 	};
 
 	const selectImage = async (p5, file: FileMap) => {
+		p5.noLoop();
 		selectedImagePath = IMAGE_PREFIX + file.FileName;
-		selectedImage = await p5.loadImage(selectedImagePath);
 		startX = p5.mouseX;
 		startY = p5.mouseY;
-		initialFrameCount = p5.frameCount;
-		p5.loop();
+		p5.loadImage(selectedImagePath, (img) => {
+			// Use callback rather than await to ensure that image is fully loaded?
+			// Start expansion from mouse position
+			initialFrameCount = p5.frameCount;
+			selectedImage = img;
+			p5.loop();
+		});
 	};
 
 	const updateImage = (p5) => {
@@ -119,8 +123,8 @@
 
 	const mushroomSketch: Sketch = async (p5) => {
 		p5.setup = () => {
-			width = Math.min(clientWidth, 800)
-			height = width
+			width = Math.min(clientWidth, 800);
+			height = width;
 			p5.createCanvas(width, height);
 			p5.imageMode(p5.CENTER);
 		};
@@ -143,7 +147,7 @@
 				updateImage(p5);
 				if (updateComplete) {
 					p5.noLoop();
-					const id = selectedImagePath.substr(selectedImagePath.length-13, 8);
+					const id = selectedImagePath.substr(selectedImagePath.length - 13, 8);
 					p5.strokeWeight(0);
 					p5.fill('white');
 					p5.rect(9, height - 8, 58, -13);
@@ -174,10 +178,10 @@
 			height = width;
 			scaleData(data, width, height);
 			p5.resizeCanvas(width, height);
-		}
+		};
 	};
 </script>
 
-<div class="sketch-container" bind:clientWidth={clientWidth}>
-<P5 sketch={mushroomSketch} />
+<div class="sketch-container" bind:clientWidth>
+	<P5 sketch={mushroomSketch} />
 </div>
