@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { onMount } from 'svelte';
 	import P5, { type Sketch } from 'p5-svelte';
 
 	let clientWidth: number;
@@ -47,19 +48,21 @@
 			throw new Error(`HTTP error. Status: ${response.status}`);
 		}
 		const json = await response.json();
-		const data = json.filter((d: FileMap) => d.FileName !== 'IMG_2161.jpeg');
+		return json.filter((d: FileMap) => d.FileName !== 'IMG_2161.jpeg');
+	};
 
+	const scaleData = (data: FileMap[], width: number, height: number) => {
 		// Add x, y coordinates
-		const latitudeRange = range(data.map((d: FileMap) => d.GPSLatitude));
-		const longitudeRange = range(data.map((d: FileMap) => d.GPSLongitude));
-		data.forEach((d: FileMap) => {
+		const latitudeRange = range(data.map((d) => d.GPSLatitude));
+		const longitudeRange = range(data.map((d) => d.GPSLongitude));
+
+		data.forEach((d) => {
 			d.color = color[d.Who];
 			// p5 coordinates are from top left
 			d.x = scale(d.GPSLongitude, longitudeRange, width);
 			d.y = height - scale(d.GPSLatitude, latitudeRange, height);
 		});
-		return data;
-	};
+	}
 
 	const range = (x: number[]): [number, number] => {
 		return [Math.min(...x), Math.max(...x)];
@@ -122,7 +125,8 @@
 			p5.imageMode(p5.CENTER);
 		};
 
-		const data = await fetchData(url);
+		const data: FileMap[] = await fetchData(url);
+		scaleData(data, width, height);
 
 		const plotData = () => {
 			p5.background(220);
@@ -135,10 +139,17 @@
 		};
 
 		p5.draw = () => {
-			console.log(selectedImagePath);
 			if (selectedImage) {
 				updateImage(p5);
-				if (updateComplete) p5.noLoop();
+				if (updateComplete) {
+					p5.noLoop();
+					const id = selectedImagePath.substr(selectedImagePath.length-13, 8);
+					p5.strokeWeight(0);
+					p5.fill('white');
+					p5.rect(9, height - 8, 58, -13);
+					p5.fill('black');
+					p5.text(id, 10, height - 10);
+				}
 			} else {
 				plotData();
 			}
@@ -150,7 +161,7 @@
 				return;
 			}
 			let filtered: FileMap[] = data.filter(
-				(d: FileMap) => p5.dist(p5.mouseX, p5.mouseY, d.x, d.y) < stroke / 2
+				(d) => p5.dist(p5.mouseX, p5.mouseY, d.x, d.y) < stroke / 2
 			);
 			if (filtered.length) {
 				const i = Math.floor(p5.random(filtered.length));
@@ -161,6 +172,7 @@
 		p5.windowResized = () => {
 			width = Math.min(clientWidth, 800);
 			height = width;
+			scaleData(data, width, height);
 			p5.resizeCanvas(width, height);
 		}
 	};
