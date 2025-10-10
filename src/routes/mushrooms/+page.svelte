@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { Styles, Container } from '@sveltestrap/sveltestrap';
 	import MushroomPlot from '$lib/MushroomPlot.svelte';
-
-	let width = 400;
 </script>
 
 <Styles />
@@ -19,5 +17,5 @@
 		location). Click again to show the map.
 	</p>
 
-	<MushroomPlot {width} />
+	<MushroomPlot />
 </Container>
