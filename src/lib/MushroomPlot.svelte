@@ -145,7 +145,7 @@
 			);
 		};
 
-		const updateImage = (p5) => {
+		const updateImage = () => {
 			// Redraw the data layer so images expanding toward center don't 'streak'
 			plotData();
 
@@ -185,7 +185,7 @@
 
 		p5.draw = () => {
 			if (selectedImage) {
-				updateImage(p5);
+				updateImage();
 				labelImage();
 				if (updateComplete) {
 					p5.noLoop();
@@ -198,7 +198,7 @@
 
 		p5.mouseClicked = () => {
 			if (selectedImage) {
-				removeImage(p5);
+				removeImage();
 				return;
 			}
 			let nearest: FileMap | null = null;
