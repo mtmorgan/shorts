@@ -18,7 +18,7 @@
 
 	<p>
 		Click on a dot to see the picture(s). Click again to see the next picture
-		(if more than one picture at the location of the click) or to return to the
+		(if more than one picture at the location of the dot) or to return to the
 		map.
 	</p>
 

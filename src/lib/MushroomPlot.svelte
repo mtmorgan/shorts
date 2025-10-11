@@ -31,7 +31,9 @@
 	}
 	const color: ColorMap = {
 		Alison: '#66C2A5', // Green
-		Martin: '#FC8D62' // Salmon
+		Martin: '#FC8D62', // Salmon
+		Joan: '#7570B3', // Purple
+		Katy: '#E7298A' // Hot pink
 	};
 
 	// Image
@@ -62,12 +64,13 @@
 	};
 
 	const fetchData = async (url: string) => {
+		const reject = new Set(['IMG_2161.jpeg', 'IMG_5989.jpeg']);
 		const response = await fetch(url);
 		if (!response.ok) {
 			throw new Error(`HTTP error. Status: ${response.status}`);
 		}
 		const json = await response.json();
-		return json.filter((d: FileMap) => d.FileName !== 'IMG_2161.jpeg');
+		return json.filter((d: FileMap) => !reject.has(d.FileName));
 	};
 
 	const scaleData = (data: FileMap[], width: number, height: number) => {

@@ -22,11 +22,7 @@ img_tbl <-
     unclass() |>
     as_tibble() |>
     mutate(
-        Who = case_match(
-            Software,
-            "18.5" ~ "Martin",
-            "18.6.2" ~ "Alison"
-        ),
+        Who = sub(".*:", "", Subject),
         CreateDate = as.POSIXct(CreateDate, format = "%Y:%m:%d %H:%M:%S")
     ) |>
     select(FileName, CreateDate, Who, GPSLatitude, GPSLongitude)
@@ -38,9 +34,10 @@ jsonlite::write_json(
 
 library(ggplot2)
 
-## IMG_2161.jpeg, from Alison, seems to be in the wrong location...
-xx <- img_tbl |>
-    filter(FileName != "IMG_2161.jpeg") |>
+## A couple of images seem to be off property...
+xx <-
+    img_tbl |>
+    filter(!FileName %in% c("IMG_5989.jpeg", "IMG_2161.jpeg")) |>
     ggplot() +
     aes(x = GPSLongitude, y = GPSLatitude , color = Who, label = FileName) +
     geom_point() +
