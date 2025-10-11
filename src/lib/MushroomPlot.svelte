@@ -7,8 +7,8 @@
 	let clientWidth: number;
 	let width: number;
 	let height: number;
-	let stroke = 12;
 	const backgroundColor = 220;
+	const clickDistance = 8;
 
 	// Data
 
@@ -23,6 +23,7 @@
 		color: string;
 		x: number;
 		y: number;
+		distance: number; // Distance from most recent click
 	}
 
 	interface ColorMap {
@@ -80,6 +81,7 @@
 			// p5 coordinates are from top left
 			d.x = scale(d.GPSLongitude, longitudeRange, width);
 			d.y = height - scale(d.GPSLatitude, latitudeRange, height);
+			d.distance = 0;
 		});
 	};
 
@@ -109,9 +111,12 @@
 
 		const plotData = () => {
 			p5.background(backgroundColor);
-			p5.strokeWeight(stroke);
+			p5.strokeWeight(1);
 			data.forEach((d: FileMap) => {
-				p5.stroke(d.color).point(d.x, d.y);
+				const color = p5.color(d.color)
+				p5.stroke(color);
+				color.setAlpha(100);
+				p5.fill(color).circle(d.x, d.y, 2 * clickDistance);
 			});
 		};
 
@@ -201,16 +206,15 @@
 				removeImage();
 				return;
 			}
-			let nearest: FileMap | null = null;
-			let distance = 20;
-			data.forEach((d) => {
-				let thisDistance = p5.dist(p5.mouseX, p5.mouseY, d.x, d.y)
-				if (thisDistance < distance) {
-					distance = thisDistance;
-					nearest = d;
-				}
+			let filtered = data.filter((d) => {
+				d.distance = p5.dist(p5.mouseX, p5.mouseY, d.x, d.y)
+				return d.distance < clickDistance
 			});
-			if (nearest) selectImage(nearest);
+			filtered.sort((x, y) => x.distance - y.distance);
+			if (filtered.length) {
+				console.log('filtered:', filtered)
+				selectImage(filtered[0]);
+			}
 		};
 
 		p5.windowResized = () => {
