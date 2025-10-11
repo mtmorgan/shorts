@@ -7,8 +7,8 @@
 	let clientWidth: number;
 	let width: number;
 	let height: number;
-	let stroke = 12;
 	const backgroundColor = 220;
+	const clickDistance = 8;
 
 	// Data
 
@@ -23,6 +23,7 @@
 		color: string;
 		x: number;
 		y: number;
+		distance: number; // Distance from most recent click
 	}
 
 	interface ColorMap {
@@ -30,14 +31,15 @@
 	}
 	const color: ColorMap = {
 		Alison: '#66C2A5', // Green
-		Martin: '#FC8D62' // Salmon
+		Martin: '#FC8D62', // Salmon
+		Joan: '#7570B3', // Purple
+		Katy: '#E7298A' // Hot pink
 	};
 
 	// Image
 
 	const IMAGE_PREFIX: string = resolve('/images') + '/';
 	const url: string = IMAGE_PREFIX + 'mushrooms.json';
-	let selectedImagePath: string;
 	let selectedImage: any = null;
 
 	// Image expansion
@@ -62,12 +64,13 @@
 	};
 
 	const fetchData = async (url: string) => {
+		const reject = new Set(['IMG_2161.jpeg', 'IMG_5989.jpeg']);
 		const response = await fetch(url);
 		if (!response.ok) {
 			throw new Error(`HTTP error. Status: ${response.status}`);
 		}
 		const json = await response.json();
-		return json.filter((d: FileMap) => d.FileName !== 'IMG_2161.jpeg');
+		return json.filter((d: FileMap) => !reject.has(d.FileName));
 	};
 
 	const scaleData = (data: FileMap[], width: number, height: number) => {
@@ -80,6 +83,7 @@
 			// p5 coordinates are from top left
 			d.x = scale(d.GPSLongitude, longitudeRange, width);
 			d.y = height - scale(d.GPSLatitude, latitudeRange, height);
+			d.distance = 0;
 		});
 	};
 
@@ -105,31 +109,44 @@
 		// Data load and display
 
 		const data: FileMap[] = await fetchData(url);
+		let selected: FileMap[] = Array();
 		scaleData(data, width, height);
 
 		const plotData = () => {
 			p5.background(backgroundColor);
-			p5.strokeWeight(stroke);
+			p5.strokeWeight(1);
 			data.forEach((d: FileMap) => {
-				p5.stroke(d.color).point(d.x, d.y);
+				const color = p5.color(d.color);
+				p5.stroke(color);
+				color.setAlpha(100);
+				p5.fill(color).circle(d.x, d.y, 2 * clickDistance);
 			});
 		};
 
 		// Image load and display
 
+		const queueImages = (x: number, y: number) => {
+			selected = data.filter((d) => {
+				d.distance = p5.dist(x, y, d.x, d.y);
+				return d.distance < clickDistance;
+			});
+			selected.sort((x, y) => x.distance - y.distance);
+		};
+
 		const labelImage = () => {
-			const id = selectedImagePath.substring(
-				selectedImagePath.length - 13,
-				selectedImagePath.length - 5
-			);
+			const path = selected[0].FileName;
+			const id = path.substring(path.length - 13, path.length - 5);
 			inform(id);
 		};
 
-		const selectImage = async (file: FileMap) => {
-			selectedImagePath = IMAGE_PREFIX + file.FileName;
+		const selectImage = async () => {
+			if (!selected.length) {
+				return;
+			}
+
 			labelImage();
 			p5.loadImage(
-				selectedImagePath,
+				IMAGE_PREFIX + selected[0].FileName,
 				(img) => {
 					// Use callback rather than await to ensure that image is fully loaded?
 					// Start expansion from mouse position
@@ -139,7 +156,7 @@
 					selectedImage = img;
 					p5.loop();
 				},
-				(event: Event) => {
+				() => {
 					inform('Error loading image');
 				}
 			);
@@ -171,14 +188,15 @@
 			const currentHeight =
 				currentSize * (selectedImage.height / selectedImage.width);
 			p5.image(selectedImage, currentX, currentY, currentSize, currentHeight);
+			labelImage();
 
 			// Stop loop when at full width. FIXME: full width or height
 			if (currentSize >= width) updateComplete = true;
 		};
 
 		const removeImage = () => {
+			selected.shift();
 			selectedImage = null;
-			selectedImagePath = '';
 			updateComplete = false;
 			plotData();
 		};
@@ -186,7 +204,6 @@
 		p5.draw = () => {
 			if (selectedImage) {
 				updateImage();
-				labelImage();
 				if (updateComplete) {
 					p5.noLoop();
 				}
@@ -199,18 +216,10 @@
 		p5.mouseClicked = () => {
 			if (selectedImage) {
 				removeImage();
-				return;
+			} else {
+				queueImages(p5.mouseX, p5.mouseY);
 			}
-			let nearest: FileMap | null = null;
-			let distance = 20;
-			data.forEach((d) => {
-				let thisDistance = p5.dist(p5.mouseX, p5.mouseY, d.x, d.y)
-				if (thisDistance < distance) {
-					distance = thisDistance;
-					nearest = d;
-				}
-			});
-			if (nearest) selectImage(nearest);
+			selectImage();
 		};
 
 		p5.windowResized = () => {

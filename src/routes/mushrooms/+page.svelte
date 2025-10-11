@@ -12,9 +12,14 @@
 		Mushrooms are pretty amazing. Ancient. Weird. Scary. We walked around on a
 		couple of days taking pictures of mushrooms. Each dot represents the
 		geographical location where one or more pictures were taken. The color of
-		the dot indicates who took the picture. Click on a dot to see the picture
-		(or a randomly selected picture if there is more than one taken at that
-		location). Click again to show the map.
+		the dot indicates who took the picture. Overlapping dots (darker color)
+		indicates multiple pictures.
+	</p>
+
+	<p>
+		Click on a dot to see the picture(s). Click again to see the next picture
+		(if more than one picture at the location of the dot) or to return to the
+		map.
 	</p>
 
 	<MushroomPlot />
