@@ -13,6 +13,7 @@
 <Container sm>
 	<h1>P5 Shorts</h1>
 	<ListGroup>
+		<ListGroupItem tag="a" href="./ourplace" action>Our Place</ListGroupItem>
 		<ListGroupItem tag="a" href="./mushrooms" action>Mushrooms</ListGroupItem>
 		<ListGroupItem tag="a" href="./sun-glitters" action
 			>Sun glitters</ListGroupItem
