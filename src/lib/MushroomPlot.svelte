@@ -7,7 +7,6 @@
 	let clientWidth: number;
 	let width: number;
 	let height: number;
-	const backgroundColor = 220;
 	const clickDistance = 8;
 
 	// Data
@@ -96,6 +95,8 @@
 			p5.createCanvas(width, height);
 			p5.imageMode(p5.CENTER);
 		};
+		const backgroundColor = p5.color(225, 237, 206);
+
 
 		// Utility
 
