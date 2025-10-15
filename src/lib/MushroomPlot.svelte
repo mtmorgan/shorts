@@ -1,13 +1,24 @@
 <script lang="ts">
+	import { onMount, onDestroy } from 'svelte';
 	import { resolve } from '$app/paths';
 	import P5, { type Sketch } from 'p5-svelte';
+	import 'leaflet/dist/leaflet.css';
 
 	// Sketch configuration
 
-	let clientWidth: number;
+	let clientWidth = $state(0);
 	let width: number;
 	let height: number;
 	const clickDistance = 8;
+
+	// P5 / leaflet coordination
+
+	// Use a reactive Svelte variable to hold map bounds.
+	// This allows the p5 sketch to react to changes in the map view.
+	let mapBounds = $state({
+		latLngToPixel: (lat, lon) => ({ x: 0, y: 0 }),
+		zoom: () => 0
+	});
 
 	// Data
 
@@ -20,9 +31,7 @@
 		Who: string;
 		// Calculated fields
 		color: string;
-		x: number;
-		y: number;
-		distance: number; // Distance from most recent click
+		distance: number;
 	}
 
 	interface ColorMap {
@@ -52,38 +61,17 @@
 
 	// Fetch and transform data helpers
 
-	const range = (x: number[]): [number, number] => {
-		return [Math.min(...x), Math.max(...x)];
-	};
-
-	const scale = (x: number, range: [number, number], to: number) => {
-		const pad = 0.05;
-		const s0 = (x - range[0]) / (range[1] - range[0]);
-		return to * (pad + (1 - 2 * pad) * s0);
-	};
-
 	const fetchData = async (url: string) => {
 		const reject = new Set(['IMG_2161.jpeg', 'IMG_5989.jpeg']);
 		const response = await fetch(url);
 		if (!response.ok) {
 			throw new Error(`HTTP error. Status: ${response.status}`);
 		}
-		const json = await response.json();
-		return json.filter((d: FileMap) => !reject.has(d.FileName));
-	};
-
-	const scaleData = (data: FileMap[], width: number, height: number) => {
-		// Add x, y coordinates
-		const latitudeRange = range(data.map((d) => d.GPSLatitude));
-		const longitudeRange = range(data.map((d) => d.GPSLongitude));
-
-		data.forEach((d) => {
-			d.color = color[d.Who];
-			// p5 coordinates are from top left
-			d.x = scale(d.GPSLongitude, longitudeRange, width);
-			d.y = height - scale(d.GPSLatitude, latitudeRange, height);
-			d.distance = 0;
-		});
+		const data: FileMap[] = await response.json();
+		// Remove out-of-bound images; color by creator
+		const filtered = data.filter((d: FileMap) => !reject.has(d.FileName));
+		filtered.forEach((d) => (d.color = color[d.Who]));
+		return filtered;
 	};
 
 	// sketch
@@ -95,8 +83,6 @@
 			p5.createCanvas(width, height);
 			p5.imageMode(p5.CENTER);
 		};
-		const backgroundColor = p5.color(225, 237, 206);
-
 
 		// Utility
 
@@ -111,24 +97,26 @@
 
 		const data: FileMap[] = await fetchData(url);
 		let selected: FileMap[] = Array();
-		scaleData(data, width, height);
 
 		const plotData = () => {
-			p5.background(backgroundColor);
+			p5.background(0, 0); // Transparent
+			p5.clear();
 			p5.strokeWeight(1);
 			data.forEach((d: FileMap) => {
 				const color = p5.color(d.color);
+				const { x, y } = mapBounds.latLngToPixel(d.GPSLatitude, d.GPSLongitude);
 				p5.stroke(color);
 				color.setAlpha(100);
-				p5.fill(color).circle(d.x, d.y, 2 * clickDistance);
+				p5.fill(color).circle(x, y, 2 * clickDistance);
 			});
 		};
 
 		// Image load and display
 
-		const queueImages = (x: number, y: number) => {
+		const queueImages = (mouseX: number, mouseY: number) => {
 			selected = data.filter((d) => {
-				d.distance = p5.dist(x, y, d.x, d.y);
+				const { x, y } = mapBounds.latLngToPixel(d.GPSLatitude, d.GPSLongitude);
+				d.distance = p5.dist(mouseX, mouseY, x, y);
 				return d.distance < clickDistance;
 			});
 			selected.sort((x, y) => x.distance - y.distance);
@@ -197,12 +185,15 @@
 
 		const removeImage = () => {
 			selected.shift();
+			p5.clear(); // Remove image & data
 			selectedImage = null;
 			updateComplete = false;
 			plotData();
 		};
 
 		p5.draw = () => {
+			if (!mapBounds) return; // Map not ready
+
 			if (selectedImage) {
 				updateImage();
 				if (updateComplete) {
@@ -226,12 +217,116 @@
 		p5.windowResized = () => {
 			width = Math.min(clientWidth, 800);
 			height = width;
-			scaleData(data, width, height);
 			p5.resizeCanvas(width, height);
 		};
 	};
+
+	// Map
+
+	// Leaflet map variables
+	let mapElement: HTMLDivElement;
+	let leafletMap: L.Map;
+	const lotColor = '#fc8d62';
+
+	onMount(async () => {
+		const L = await import('leaflet');
+
+		const topography = L.tileLayer(
+			'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+			{
+				crossOrigin: true
+			}
+		);
+
+		const lotBoundaries = {
+			type: 'Feature',
+			properties: {
+				name: 'Our Place'
+			},
+			geometry: {
+				type: 'Polygon',
+				coordinates: [
+					[
+						[-79.88031, 43.89948],
+						[-79.8814, 43.89844],
+						[-79.87843, 43.89613],
+						[-79.87626, 43.89452],
+						[-79.87114, 43.89904],
+						[-79.87342, 43.90079],
+						[-79.87692, 43.89754],
+						[-79.88031, 43.89948]
+					]
+				]
+			}
+		};
+
+		const lot = L.geoJSON(lotBoundaries, {
+			color: lotColor,
+			weight: 1,
+			fillOpacity: 0
+		});
+
+		leafletMap = L.map(mapElement, {
+			zoomSnap: 0,
+			layers: [topography, lot]
+		}).fitBounds(lot.getBounds());
+
+		// 2. Pass map data to the p5 sketch on events.
+		const updateMapBounds = () => {
+			mapBounds = {
+				latLngToPixel: (lat, lon) => {
+					const point = leafletMap.latLngToLayerPoint([lat, lon]);
+					return { x: point.x, y: point.y };
+				},
+				zoom: () => leafletMap.getZoom()
+			};
+		};
+
+		// Update p5 coordinates when the map moves or zooms
+		leafletMap.on('move', updateMapBounds);
+		leafletMap.on('zoom', updateMapBounds);
+
+		updateMapBounds(); // Initialize the bounds once
+	});
+
+	onDestroy(() => {
+		// Clean up Leaflet to prevent memory leaks
+		if (leafletMap) {
+			leafletMap.remove();
+		}
+	});
 </script>
 
-<div class="sketch-container" bind:clientWidth>
-	<P5 {sketch} />
+<div class="map-container" bind:this={mapElement}>
+	<!-- This is the container for the Leaflet map -->
+	<!-- p5-svelte will place its canvas here as well -->
+	<div class="map-overlay" bind:clientWidth>
+		<P5 {sketch} />
+	</div>
 </div>
+<style>
+	.map-container {
+		position: relative;
+		width: min(800px, 100%);
+		aspect-ratio: 1 / 1;
+		margin-bottom: 1rem;
+	}
+	/* Make sure the Leaflet container has a lower z-index */
+	:global(.leaflet-pane) {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		z-index: 1; /* Lower z-index than the p5 overlay */
+	}
+
+	.map-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		z-index: 2; /* Ensure p5 is above the map tiles */
+	}
+</style>

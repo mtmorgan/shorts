@@ -1,22 +1,12 @@
 <script lang="ts">
 	import { Styles, Container } from '@sveltestrap/sveltestrap';
 	import MushroomPlot from '$lib/MushroomPlot.svelte';
-	import OurPlace from '$lib/OurPlace.svelte';
 </script>
 
 <Styles />
 
 <Container sm>
 	<h1>Mushrooms!</h1>
-
-	<p>
-		Here's a map of the location of our mushroom adventure. The orange lines are
-		the boundary of our property. Learn a little more about <a href="ourplace"
-			>our place</a
-		>.
-	</p>
-
-	<OurPlace />
 
 	<p>
 		Mushrooms are pretty amazing. Ancient. Weird. Scary. We walked around on a
@@ -33,6 +23,12 @@
 	</p>
 
 	<MushroomPlot />
+
+	<p>
+		The dots are placed on top of a map of the location of our mushroom
+		adventure. The orange lines are the approximate boundary of our property.
+		Learn a little more about <a href="ourplace">our place</a>.
+	</p>
 
 	<h2>Implementation notes</h2>
 
@@ -66,8 +62,16 @@
 	</p>
 
 	<p>
-		Google Gemini was helpful during many steps, and obstinately unhelpful
-		during others.
+		Google Gemini and the resources it used was helpful during many steps,
+		especially overlaying the P5 and leaflet components. Gemini was sometimes
+		obstinately unhelpful.
+	</p>
+
+	<p>
+		Leaflet (topography map) attribution: Tiles &copy; Esri &mdash; Esri,
+		DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase,
+		Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and
+		the GIS User Community.
 	</p>
 
 	<p>
