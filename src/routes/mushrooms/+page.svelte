@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Styles, Container } from '@sveltestrap/sveltestrap';
-	import MushroomPlot from '$lib/MushroomPlot.svelte';
+	import MushroomMap from '$lib/MushroomMap.svelte';
 </script>
 
 <Styles />
@@ -22,7 +22,7 @@
 		map.
 	</p>
 
-	<MushroomPlot />
+	<MushroomMap />
 
 	<p>
 		The dots are placed on top of a map showing location of our mushroom
@@ -65,7 +65,10 @@
 	<p>
 		Google Gemini and the resources it used was helpful during many steps,
 		especially overlaying the P5 and leaflet components. Gemini was sometimes
-		obstinately unhelpful.
+		obstinately unhelpful. A major struggle was realizing that my P5 code was
+		mostly event driven (<code>p5.noLoop()</code>) so the reactivity provided by
+		svelte was not actively updating the point locations when I zoomed or moved
+		the map.
 	</p>
 
 	<p>
