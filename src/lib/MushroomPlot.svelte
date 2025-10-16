@@ -11,14 +11,24 @@
 	let height: number;
 	const clickDistance = 8;
 
-	// P5 / leaflet coordination
+	// P5 / leaflet coordination. Cannot use Svelte reactivity here because
+	// p5 may be in noLoop(). See onMount() for how mapBounds is updated.
 
-	// Use a reactive Svelte variable to hold map bounds.
-	// This allows the p5 sketch to react to changes in the map view.
-	let mapBounds = $state({
-		latLngToPixel: (lat, lon) => ({ x: 0, y: 0 }),
-		zoom: () => 0
-	});
+	// Map GPS latitude and longitude to leaflet coordinates; see onMount().
+	let mapBounds = {
+		latLngToPixel: (latitude: number, longitude: number) => ({
+			x: latitude,
+			y: longitude
+		}),
+		zoom: (): number => 0
+	};
+
+	// Capture p5 instance to allow interaction outside the sketch
+	// (e.g., to request redraw on map changes)
+	let p5Instance: P5;
+	const handleInstance = (e: CustomEvent<P5>) => {
+		p5Instance = e.detail;
+	};
 
 	// Data
 
@@ -46,7 +56,7 @@
 
 	// Image
 
-	const IMAGE_PREFIX: string = resolve('/images') + '/';
+	const IMAGE_PREFIX: string = resolve('/images/');
 	const url: string = IMAGE_PREFIX + 'mushrooms.json';
 	let selectedImage: any = null;
 
@@ -137,7 +147,7 @@
 			p5.loadImage(
 				IMAGE_PREFIX + selected[0].FileName,
 				(img) => {
-					// Use callback rather than await to ensure that image is fully loaded?
+					// Use callback to ensure that image is fully loaded?
 					// Start expansion from mouse position
 					startX = p5.mouseX;
 					startY = p5.mouseY;
@@ -185,15 +195,14 @@
 
 		const removeImage = () => {
 			selected.shift();
-			p5.clear(); // Remove image & data
 			selectedImage = null;
 			updateComplete = false;
+			p5.clear(); // Remove image & data
 			plotData();
 		};
 
 		p5.draw = () => {
 			if (!mapBounds) return; // Map not ready
-
 			if (selectedImage) {
 				updateImage();
 				if (updateComplete) {
@@ -271,21 +280,29 @@
 			layers: [topography, lot]
 		}).fitBounds(lot.getBounds());
 
-		// 2. Pass map data to the p5 sketch on events.
+		// Update p5 coordinates when the map moves or zooms
+
 		const updateMapBounds = () => {
 			mapBounds = {
-				latLngToPixel: (lat, lon) => {
-					const point = leafletMap.latLngToLayerPoint([lat, lon]);
-					return { x: point.x, y: point.y };
+				latLngToPixel: (latitude: number, longitude: number) => {
+					const point = leafletMap.latLngToContainerPoint([
+						latitude,
+						longitude
+					]);
+					return {
+						x: point.x,
+						y: point.y
+					};
 				},
 				zoom: () => leafletMap.getZoom()
 			};
+			if (p5Instance) {
+				// Request p5 to redraw with new map bounds; p5 may be in noLoop mode
+				p5Instance.redraw();
+			}
 		};
 
-		// Update p5 coordinates when the map moves or zooms
-		leafletMap.on('move', updateMapBounds);
-		leafletMap.on('zoom', updateMapBounds);
-
+		leafletMap.on('zoom drag move', updateMapBounds);
 		updateMapBounds(); // Initialize the bounds once
 	});
 
@@ -301,9 +318,10 @@
 	<!-- This is the container for the Leaflet map -->
 	<!-- p5-svelte will place its canvas here as well -->
 	<div class="map-overlay" bind:clientWidth>
-		<P5 {sketch} />
+		<P5 {sketch} on:instance={handleInstance} />
 	</div>
 </div>
+
 <style>
 	.map-container {
 		position: relative;

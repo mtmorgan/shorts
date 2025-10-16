@@ -25,7 +25,7 @@
 	<MushroomPlot />
 
 	<p>
-		The dots are placed on top of a map of the location of our mushroom
+		The dots are placed on top of a map showing location of our mushroom
 		adventure. The orange lines are the approximate boundary of our property.
 		Learn a little more about <a href="ourplace">our place</a>.
 	</p>
@@ -58,7 +58,8 @@
 	<p>
 		The <a href="https://p5js.org">p5.js</a>
 		toolkit is used to render the plot and images, via the
-		<a href="https://p5-svelte.netlify.app/">p5-svelte</a> component.
+		<a href="https://p5-svelte.netlify.app/">p5-svelte</a> component. Maps are
+		drawn using <a href="https://leafletjs.com/">leaflet</a>.
 	</p>
 
 	<p>
