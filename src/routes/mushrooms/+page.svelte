@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Styles, Container } from '@sveltestrap/sveltestrap';
-	import MushroomPlot from '$lib/MushroomPlot.svelte';
-	import OurPlace from '$lib/OurPlace.svelte';
+	import MushroomMap from '$lib/MushroomMap.svelte';
 </script>
 
 <Styles />
@@ -32,7 +31,13 @@
 		map.
 	</p>
 
-	<MushroomPlot />
+	<MushroomMap />
+
+	<p>
+		The dots are placed on top of a map showing location of our mushroom
+		adventure. The orange lines are the approximate boundary of our property.
+		Learn a little more about <a href="ourplace">our place</a>.
+	</p>
 
 	<h2>Implementation notes</h2>
 
@@ -62,12 +67,24 @@
 	<p>
 		The <a href="https://p5js.org">p5.js</a>
 		toolkit is used to render the plot and images, via the
-		<a href="https://p5-svelte.netlify.app/">p5-svelte</a> component.
+		<a href="https://p5-svelte.netlify.app/">p5-svelte</a> component. Maps are
+		drawn using <a href="https://leafletjs.com/">leaflet</a>.
 	</p>
 
 	<p>
-		Google Gemini was helpful during many steps, and obstinately unhelpful
-		during others.
+		Google Gemini and the resources it used was helpful during many steps,
+		especially overlaying the P5 and leaflet components. Gemini was sometimes
+		obstinately unhelpful. A major struggle was realizing that my P5 code was
+		mostly event driven (<code>p5.noLoop()</code>) so the reactivity provided by
+		svelte was not actively updating the point locations when I zoomed or moved
+		the map.
+	</p>
+
+	<p>
+		Leaflet (topography map) attribution: Tiles &copy; Esri &mdash; Esri,
+		DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase,
+		Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and
+		the GIS User Community.
 	</p>
 
 	<p>
