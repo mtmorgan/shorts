@@ -9,15 +9,6 @@
 	<h1>Mushrooms!</h1>
 
 	<p>
-		Here's a map of the location of our mushroom adventure. The orange lines are
-		the boundary of our property. Learn a little more about <a href="ourplace"
-			>our place</a
-		>.
-	</p>
-
-	<OurPlace />
-
-	<p>
 		Mushrooms are pretty amazing. Ancient. Weird. Scary. We walked around on a
 		couple of days taking pictures of mushrooms. Each dot represents the
 		geographical location where one or more pictures were taken. The color of
