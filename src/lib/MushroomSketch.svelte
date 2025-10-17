@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { FileMap } from '$lib/types';
 	import P5, { type p5, type Sketch } from 'p5-svelte';
+	import 'leaflet/dist/leaflet.css';
 
 	// Props & state
 
@@ -23,8 +24,8 @@
 		if (dataVersion && p5Instance) {
 			if (clientWidth != width) {
 				// E.g., change of orientation
-				width = clientWidth
-				height = clientWidth
+				width = clientWidth;
+				height = clientWidth;
 				p5Instance.resizeCanvas(width, height);
 			} else {
 				// Zoom or drag
@@ -208,12 +209,12 @@
 </div>
 
 <style>
-	.map-overlay {
+	:global(.map-overlay) {
 		position: absolute;
 		top: 0;
 		left: 0;
 		width: 100%;
 		aspect-ratio: 1 / 1;
-		z-index: 2; /* Ensure p5 is above the map tiles */
+		z-index: 1001; /* Ensure p5 is above the map tiles */
 	}
 </style>
