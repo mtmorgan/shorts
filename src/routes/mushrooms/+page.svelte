@@ -83,8 +83,13 @@
 			>GitHub</a
 		>, especially
 		<a
-			href="https://github.com/mtmorgan/shorts/blob/main/src/lib/MushroomPlot.svelte"
-			>MushroomPlot.svelte</a
+			href="https://github.com/mtmorgan/shorts/blob/main/src/lib/MushroomMap.svelte"
+			>MushroomMap.svelte</a
+		>
+		and
+		<a
+			href="https://github.com/mtmorgan/shorts/blob/main/src/lib/MushroomSketch.svelte"
+			>MushroomSketch.svelte</a
 		>.
 	</p>
 </Container>
