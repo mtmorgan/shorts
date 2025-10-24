@@ -5,7 +5,6 @@
 		ListGroup,
 		ListGroupItem,
 	} from '@sveltestrap/sveltestrap';
-	import NavigationBar from '$lib/NavigationBar.svelte';
 </script>
 
 <Styles />
