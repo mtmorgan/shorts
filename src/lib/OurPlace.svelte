@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
+	import type { Feature, Polygon } from 'geojson';
+	import 'leaflet.locatecontrol/dist/L.Control.Locate.min.css';
 	import 'leaflet/dist/leaflet.css';
 
 	// Leaflet map and p5 sketch variables
@@ -13,6 +15,7 @@
 
 	onMount(async () => {
 		const L = await import('leaflet');
+		const { LocateControl } = await import('leaflet.locatecontrol');
 
 		const image = L.tileLayer(
 			'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -32,7 +35,7 @@
 			}
 		);
 
-		const lotBoundaries = {
+		const lotBoundaries: Feature<Polygon> = {
 			type: 'Feature',
 			properties: {
 				name: 'Our Place'
@@ -55,9 +58,7 @@
 		};
 
 		const lot = L.geoJSON(lotBoundaries, {
-			color: lotColor,
-			weight: 1,
-			fillOpacity: 0
+			style: { color: lotColor, weight: 1, fillOpacity: 0 }
 		});
 
 		// Map
@@ -75,6 +76,13 @@
 		};
 
 		L.control.layers(maps).addTo(leafletMap);
+
+		// Locator beacon control
+		new LocateControl({
+			locateOptions: {
+				enableHighAccuracy: true
+			}
+		}).addTo(leafletMap);
 
 		// Create a ResizeObserver to watch for changes to the map's container
 		resizeObserver = new ResizeObserver(() => {
