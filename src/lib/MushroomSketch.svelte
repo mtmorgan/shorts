@@ -47,7 +47,7 @@
 
 	let width: number;
 	let height: number;
-	const clickDistance = 8; // Better response to finger on phone screens
+	const clickDistance = 12; // Better response to finger on phone screens
 
 	interface ColorMap {
 		[key: string]: string;
@@ -215,6 +215,6 @@
 		left: 0;
 		width: 100%;
 		aspect-ratio: 1 / 1;
-		z-index: 1001; /* Ensure p5 is above the map tiles */
+		z-index: 750; /* Ensure p5 is above the map tiles */
 	}
 </style>

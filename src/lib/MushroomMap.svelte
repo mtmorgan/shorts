@@ -125,6 +125,5 @@
 		left: 0;
 		width: 100%;
 		height: 100%;
-		z-index: 1; /* Lower z-index than the p5 overlay */
 	}
 </style>
