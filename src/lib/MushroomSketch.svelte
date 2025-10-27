@@ -47,7 +47,7 @@
 
 	let width: number;
 	let height: number;
-	const clickDistance = 8; // Better response to finger on phone screens
+	const clickDistance = 12; // Better response to finger on phone screens
 
 	interface ColorMap {
 		[key: string]: string;
