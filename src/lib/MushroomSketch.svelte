@@ -215,6 +215,6 @@
 		left: 0;
 		width: 100%;
 		aspect-ratio: 1 / 1;
-		z-index: 1001; /* Ensure p5 is above the map tiles */
+		z-index: 750; /* Ensure p5 is above the map tiles */
 	}
 </style>
