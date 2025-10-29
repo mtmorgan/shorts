@@ -79,6 +79,7 @@
 
 		// Locator beacon control
 		new LocateControl({
+			keepCurrentZoomLevel: true,
 			locateOptions: {
 				enableHighAccuracy: true
 			}
