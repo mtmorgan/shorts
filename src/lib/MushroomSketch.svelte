@@ -47,6 +47,7 @@
 
 	let width: number;
 	let height: number;
+	const pointRadius = 4;
 	const clickDistance = 12; // Better response to finger on phone screens
 
 	interface ColorMap {
@@ -69,7 +70,7 @@
 			const point_color = p5.color(color[d.Who]);
 			p5.stroke(point_color);
 			point_color.setAlpha(100);
-			p5.fill(point_color).circle(d.x, d.y, 2 * clickDistance);
+			p5.fill(point_color).circle(d.x, d.y, 2 * pointRadius);
 		});
 	};
 
