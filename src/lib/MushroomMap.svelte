@@ -15,42 +15,10 @@
 
 	// Image viewing
 
-	interface DOMRectCoords {
-		top: number;
-		left: number;
-		width: number;
-		height: number;
-	}
-
-	interface LeafletClickEvent {
-		originalEvent: MouseEvent | PointerEvent;
-		latlng: any;
-		target: L.Marker;
-	}
-
 	let isImageViewing = $state(false);
 	let selectedImageUrl: string = $state('');
-	let originRect = $state<DOMRectCoords | null>(null);
 
-	const handleMarkerClick = (
-		leafletEvent: LeafletClickEvent,
-		imgSrc: string
-	) => {
-		const nativeEvent = leafletEvent.originalEvent;
-		const markerElement = nativeEvent.target as HTMLElement;
-		const rect = markerElement.getBoundingClientRect();
-		const containerElement = document.getElementById('map-container');
-		if (!containerElement) return;
-		const containerRect = containerElement.getBoundingClientRect();
-
-		// Calculate position relative to the map container
-		originRect = {
-			top: rect.top - containerRect.top,
-			left: rect.left - containerRect.left,
-			width: rect.width,
-			height: rect.height
-		};
-
+	const handleMarkerClick = (imgSrc: string) => {
 		selectedImageUrl = imgSrc;
 		isImageViewing = false;
 		setTimeout(() => {
@@ -128,7 +96,7 @@
 
 		// Define a color map for the 'Who' field
 		const alpha = 0.6;
-		const colorMap: { [key: string]: string } = {
+		const colorMap: { [key in FileMap['Who']]: string } = {
 			Alison: `rgba(102, 194, 165, ${alpha})`, // Green, 70% opaque
 			Martin: `rgba(252, 141, 98, ${alpha})`, // Salmon, 70% opaque
 			Joan: `rgba(117, 112, 179, ${alpha})`, // Purple, 70% opaque
@@ -149,7 +117,7 @@
 			})
 				.addTo(leafletMap)
 				.on('click', (e) => {
-					handleMarkerClick(e, `${IMAGE_PREFIX}${d.FileName}`);
+					handleMarkerClick(`${IMAGE_PREFIX}${d.FileName}`);
 				});
 		});
 	});
@@ -163,25 +131,15 @@
 </script>
 
 <div id="map-container" class="map-container" bind:this={mapElement}>
-	<div id="map" class="w-full h-full"></div>
 	<button
 		type="button"
 		class="modal-backdrop"
 		class:active-backdrop={isImageViewing}
-		data-zoomed={isImageViewing}
 		onclick={closeZoom}
 		aria-label="Close zoomed image"
 	>
 		{#if isImageViewing}
-			<img
-				src={selectedImageUrl}
-				alt="Zoomed mushroom"
-				class="zoom-image"
-				style:--origin-top={`${originRect.top}px`}
-				style:--origin-left={`${originRect.left}px`}
-				style:--origin-width={`${originRect.width}px`}
-				style:--origin-height={`${originRect.height}px`}
-			/>
+			<img src={selectedImageUrl} alt="Mushroom" class="mushroom-image" />
 		{/if}
 	</button>
 </div>
@@ -218,27 +176,10 @@
 	}
 
 	/* Image transition state machine */
-	.zoom-image {
+	.mushroom-image {
 		position: absolute;
 		object-fit: cover;
-		cursor: zoom-out;
 		pointer-events: auto;
-		border-radius: 50%;
-		transition:
-			top 1s cubic-bezier(0.25, 1, 0.5, 1),
-			left 1s cubic-bezier(0.25, 1, 0.5, 1),
-			width 1s cubic-bezier(0.25, 1, 0.5, 1),
-			height 1s cubic-bezier(0.25, 1, 0.5, 1),
-			border-radius 0.9s ease-out;
-
-		/* Default state: Anchored precisely on top of the Leaflet marker coordinates */
-		top: var(--origin-top) !important;
-		left: var(--origin-left) !important;
-		width: var(--origin-width) !important;
-		height: var(--origin-height) !important;
-	}
-
-	.modal-backdrop[data-zoomed='true'] .zoom-image {
 		top: 0px !important;
 		left: 0px !important;
 		width: 100% !important;
