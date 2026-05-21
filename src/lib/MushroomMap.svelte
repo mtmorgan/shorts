@@ -4,6 +4,8 @@
 	import type { FileMap } from '$lib/types';
 	import type { Feature, Polygon } from 'geojson';
 	import 'leaflet/dist/leaflet.css';
+	import 'leaflet.markercluster/dist/MarkerCluster.css';
+	import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
 	// Data
 
@@ -50,6 +52,9 @@
 
 	onMount(async () => {
 		const L = await import('leaflet');
+		window.L = L;
+		await import('leaflet.markercluster');
+
 		data = await fetchData(mushroomsUrl);
 
 		const topography = L.tileLayer(
@@ -102,7 +107,19 @@
 			Joan: `rgba(117, 112, 179, ${alpha})`, // Purple, 70% opaque
 			Katy: `rgba(231, 41, 138, ${alpha})` // Red, 70% opaque
 		};
-
+		let markers = L.markerClusterGroup({
+			showCoverageOnHover: false,
+			maxClusterRadius: 6,
+			spiderLegPolylineOptions: { weight: 1 },
+			iconCreateFunction: (cluster) => {
+				return L.divIcon({
+					className: 'custom-marker',
+					html: `<div class="marker-circle" style="background-color: 'white';">${cluster.getChildCount()}</div>`,
+					iconSize: [16, 16], // Size of the circle
+					iconAnchor: [8, 8] // Point of the icon which will correspond to marker's location
+				});
+			}
+		});
 		data.forEach((d) => {
 			const color = colorMap[d.Who] || '#808080'; // Default to gray if name not in map
 			const icon = L.divIcon({
@@ -112,14 +129,14 @@
 				iconAnchor: [6, 6] // Point of the icon which will correspond to marker's location
 			});
 
-			L.marker([d.GPSLatitude, d.GPSLongitude], {
+			const marker = L.marker([d.GPSLatitude, d.GPSLongitude], {
 				icon: icon
-			})
-				.addTo(leafletMap)
-				.on('click', (e) => {
-					handleMarkerClick(`${IMAGE_PREFIX}${d.FileName}`);
-				});
+			}).on('click', (e) => {
+				handleMarkerClick(`${IMAGE_PREFIX}${d.FileName}`);
+			});
+			markers.addLayer(marker);
 		});
+		leafletMap.addLayer(markers);
 	});
 
 	onDestroy(() => {
@@ -192,20 +209,26 @@
 		display: flex;
 		justify-content: center;
 		align-items: center;
-		border: none; /* Remove default marker border */
-		/* Ensure the parent div has the correct dimensions */
-		width: 12px !important;
-		height: 12px !important;
-		margin: 0 !important; /* Reset margin if Leaflet adds any */
+		border: none !important;
+		background: none !important;
 	}
 
 	:global(.marker-circle) {
 		width: 100%; /* Make it take the full width of its parent */
 		height: 100%; /* Make it take the full height of its parent */
 		border-radius: 50%;
-		display: block; /* Ensures the div takes up space */
+		display: flex !important;
+		align-items: center;
+		justify-content: center;
+		text-align: center;
 		box-sizing: border-box; /* Include padding and border in the element's total width and height */
 		border: 1px solid currentColor;
+		margin: 0;
+	}
+
+	:global(.marker-circle b) {
+		display: block;
+		line-height: 1;
 	}
 
 	/* Ensure the circle itself has dimensions */
