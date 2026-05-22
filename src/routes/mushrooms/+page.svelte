@@ -31,11 +31,6 @@
 		Learn a little more about <a href="ourplace">our place</a>.
 	</p>
 
-	<p>
-		The slider below allows you to walk through the mushrooms. It's not as much
-		fun as clicking on the dots in the map.
-	</p>
-
 	<MushroomWalk />
 
 	<h2>Implementation notes</h2>

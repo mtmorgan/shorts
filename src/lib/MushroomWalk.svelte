@@ -2,6 +2,11 @@
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import type { FileMap } from '$lib/types';
+	import {
+		Carousel,
+		CarouselControl,
+		CarouselItem
+	} from '@sveltestrap/sveltestrap';
 
 	// Data
 
@@ -10,9 +15,8 @@
 
 	// Fetch and filter data
 	let data: FileMap[] = $state([]);
-	let images: string[] = $state([]);
-	let currentIndex: number = $state(0);
-	let isLoading: boolean = $state(true);
+	let items: string[] = $state([]);
+	let activeIndex = $state(0);
 
 	const fetchData = async (url: string) => {
 		const reject = new Set(['IMG_2161.jpeg', 'IMG_5989.jpeg']);
@@ -22,72 +26,58 @@
 		}
 		data = await response.json();
 		data.filter((d: FileMap) => !reject.has(d.FileName));
-		images = data.map((d: FileMap) => IMAGE_PREFIX + d.FileName);
-		isLoading = false;
+		items = data.map((d: FileMap) => IMAGE_PREFIX + d.FileName);
 	};
 
 	onMount(async () => {
-		fetchData(mushroomsUrl);
+		await fetchData(mushroomsUrl);
 	});
-
-	// Function to move to the next image.
-	function nextImage() {
-		currentIndex = (currentIndex + 1) % images.length;
-	}
-
-	// Function to move to the previous image.
-	function previousImage() {
-		currentIndex = (currentIndex - 1 + images.length) % images.length;
-	}
 </script>
 
-<div class="gallery-container">
-	{#if isLoading}
-		<p>Loading images...</p>
-	{:else if images.length > 0}
-		<div class="controls">
-			<button onclick={previousImage}>&lt;</button>
-			<input
-				type="range"
-				min="0"
-				max={images.length - 1}
-				bind:value={currentIndex}
-			/> {currentIndex + 1} / {images.length}
-			<button onclick={nextImage}>&gt;</button>
-		</div>
+<p>
+	The carousel below walks through the mushrooms. It's not as much fun as
+	clicking on the dots in the map.
+</p>
 
-		<div class="image-display">
-			<!-- Use the reactive `currentIndex` to display the correct image -->
-			<img
-				src={images[currentIndex]}
-				alt={`Mushroom gallery image ${data[currentIndex].FileName}`}
-			/>
-		</div>
-	{:else}
-		<p>No images found.</p>
-	{/if}
-</div>
+<Carousel {items} bind:activeIndex>
+	<div class="carousel-inner">
+		{#each items as item, index}
+			<CarouselItem bind:activeIndex itemIndex={index}>
+				<img src={item} alt="{item} {index + 1}" />
+			</CarouselItem>
+		{/each}
+	</div>
+	<CarouselControl direction="prev" bind:activeIndex {items} />
+	<CarouselControl direction="next" bind:activeIndex {items} />
+</Carousel>
 
 <style>
-  .gallery-container {
-    display: flex;
-    flex-direction: column;
-    align-items: left;
-    gap: 1rem;
-    padding: 1em 0em;
-  }
+	/* Apply the core dimensions and box styles to the outer wrapper */
+	:global(.carousel) {
+		width: min(800px, 100%);
+		aspect-ratio: 1 / 1;
+		margin-bottom: 1rem;
+		height: auto;
+		border-radius: 4px;
+		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 
-  .image-display img {
-    max-width: 800px;
-    width: 100%;
-    height: auto;
-    border-radius: 4px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
+		/* Forces the border-radius to cut off the corners of sliding images */
+		overflow: hidden;
+	}
 
-  .controls {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-  }
+	/* Force the inner track and items to fill the 1:1 container */
+	:global(.carousel-inner),
+	:global(.carousel-item) {
+		width: 100%;
+		height: 100%;
+	}
+
+	/* Style the images inside to fill the square space cleanly */
+	:global(.carousel-item img) {
+		width: 100%;
+		height: 100%;
+		/* 'cover' ensures the image fills the 1:1 ratio without squishing.
+       Use 'contain' if you don't want any cropping. */
+		object-fit: cover;
+	}
 </style>
