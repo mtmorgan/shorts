@@ -147,7 +147,8 @@
 	});
 </script>
 
-<div id="map-container" class="map-container" bind:this={mapElement}>
+<div class="map-wrapper">
+	<div id="map-container" class="map-container" bind:this={mapElement}></div>
 	<button
 		type="button"
 		class="modal-backdrop"
@@ -162,12 +163,17 @@
 </div>
 
 <style>
-	.map-container {
-		position: relative;
-		overflow: hidden;
+	.map-wrapper {
+		position: relative; /* Context for the modal */
 		width: min(800px, 100%);
 		aspect-ratio: 1 / 1;
 		margin-bottom: 1rem;
+	}
+
+	.map-container {
+		overflow: hidden;
+		width: 100%;
+		height: 100%;
 	}
 
 	.modal-backdrop {
