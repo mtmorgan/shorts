@@ -8,6 +8,9 @@ const config = {
 	preprocess: vitePreprocess(),
 	kit: {
 		adapter: adapter(),
+		prerender: {
+			handleMissingId: 'ignore'
+		},
 		paths: {
 			base: process.argv.includes('dev') ? '' : '/shorts'
 		}

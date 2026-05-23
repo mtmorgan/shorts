@@ -14,7 +14,6 @@
 	const mushroomsUrl: string = IMAGE_PREFIX + 'mushrooms.json';
 
 	// Fetch and filter data
-	let data: FileMap[] = $state([]);
 	let items: string[] = $state([]);
 	let activeIndex = $state(0);
 
@@ -24,7 +23,7 @@
 		if (!response.ok) {
 			throw new Error(`HTTP error. Status: ${response.status}`);
 		}
-		data = await response.json();
+		const data = await response.json();
 		data.filter((d: FileMap) => !reject.has(d.FileName));
 		items = data.map((d: FileMap) => IMAGE_PREFIX + d.FileName);
 	};
