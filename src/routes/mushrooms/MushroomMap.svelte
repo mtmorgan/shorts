@@ -52,10 +52,9 @@
 
 	onMount(async () => {
 		const L = await import('leaflet');
-		window.L = L;
-		await import('leaflet.markercluster');
-
-		data = await fetchData(mushroomsUrl);
+		// work around older leaflet.markercluster module structure
+		const markerClusterModule = (await import('leaflet.markercluster')) as any;
+		const MarkerClusterGroup = markerClusterModule.MarkerClusterGroup;
 
 		const topography = L.tileLayer(
 			'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
@@ -107,11 +106,12 @@
 			Joan: `rgba(117, 112, 179, ${alpha})`, // Purple, 70% opaque
 			Katy: `rgba(231, 41, 138, ${alpha})` // Red, 70% opaque
 		};
-		let markers = L.markerClusterGroup({
+
+		let markers = new MarkerClusterGroup({
 			showCoverageOnHover: false,
 			maxClusterRadius: 6,
 			spiderLegPolylineOptions: { weight: 1 },
-			iconCreateFunction: (cluster) => {
+			iconCreateFunction: (cluster: any) => {
 				return L.divIcon({
 					className: 'custom-marker',
 					html: `<div class="marker-circle" style="background-color: 'white';">${cluster.getChildCount()}</div>`,
@@ -120,6 +120,8 @@
 				});
 			}
 		});
+
+		data = await fetchData(mushroomsUrl);
 		data.forEach((d) => {
 			const color = colorMap[d.Who] || '#808080'; // Default to gray if name not in map
 			const icon = L.divIcon({
