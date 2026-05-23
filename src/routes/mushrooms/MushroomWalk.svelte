@@ -9,27 +9,48 @@
 	} from '@sveltestrap/sveltestrap';
 
 	// Data
-
 	const IMAGE_PREFIX: string = resolve('/images/' as any);
 	const mushroomsUrl: string = IMAGE_PREFIX + 'mushrooms.json';
 
-	// Fetch and filter data
-	let items: string[] = $state([]);
+	// State
+	let metadata: FileMap[] = []; // All metadata
+	let metadataLoaded = $state(false);
+	let items: (string | null)[] = $state([]); // URLs for displayed images
 	let activeIndex = $state(0);
 
-	const fetchData = async (url: string) => {
+	// Fetch metadata
+	const fetchMetadata = async () => {
 		const reject = new Set(['IMG_2161.jpeg', 'IMG_5989.jpeg']);
-		const response = await fetch(url);
-		if (!response.ok) {
-			throw new Error(`HTTP error. Status: ${response.status}`);
+		try {
+			const response = await fetch(mushroomsUrl);
+			if (!response.ok) {
+				throw new Error(`HTTP error. Status: ${response.status}`);
+			}
+			const data = await response.json();
+			metadata = data.filter((d: FileMap) => !reject.has(d.FileName));
+			items = new Array(metadata.length).fill(null);
+			metadataLoaded = true; // Mark metadata as loaded
+		} catch (error) {
+			console.error('Failed to fetch mushroom metadata:', error);
 		}
-		const data = await response.json();
-		data.filter((d: FileMap) => !reject.has(d.FileName));
-		items = data.map((d: FileMap) => IMAGE_PREFIX + d.FileName);
+	};
+
+	// Fetch a specific image URL when needed
+	const fetchImageForIndex = (index: number) => {
+		if (metadata.length > index && items[index] === null) {
+			items[index] = IMAGE_PREFIX + metadata[index].FileName;
+		}
 	};
 
 	onMount(async () => {
-		await fetchData(mushroomsUrl);
+		await fetchMetadata();
+	});
+
+	// Watch for changes in activeIndex and set the image URL
+	$effect(() => {
+		if (metadataLoaded) {
+			fetchImageForIndex(activeIndex);
+		}
 	});
 </script>
 
@@ -38,17 +59,27 @@
 	clicking on the dots in the map.
 </p>
 
-<Carousel {items} bind:activeIndex>
-	<div class="carousel-inner">
-		{#each items as item, index}
-			<CarouselItem bind:activeIndex itemIndex={index}>
-				<img src={item} alt="{item} {index + 1}" />
-			</CarouselItem>
-		{/each}
-	</div>
-	<CarouselControl direction="prev" bind:activeIndex {items} />
-	<CarouselControl direction="next" bind:activeIndex {items} />
-</Carousel>
+{#if items.length > 0}
+	<Carousel {items} bind:activeIndex>
+		<div class="carousel-inner">
+			{#each items as _, index}
+				<CarouselItem bind:activeIndex itemIndex={index}>
+					{#if items[index]}
+						<img src={items[index]} alt="Mushroom {index + 1}" />
+					{:else}
+						<!-- Placeholder while image is loading -->
+						<div class="placeholder">Loading mushroom {index + 1}...</div>
+					{/if}
+				</CarouselItem>
+			{/each}
+		</div>
+		<CarouselControl direction="prev" bind:activeIndex {items} />
+		<CarouselControl direction="next" bind:activeIndex {items} />
+	</Carousel>
+{:else}
+	<!-- Placeholder while data is being fetched -->
+	<div class="placeholder">Loading mushrooms...</div>
+{/if}
 
 <style>
 	/* Apply the core dimensions and box styles to the outer wrapper */
@@ -78,5 +109,16 @@
 		/* 'cover' ensures the image fills the 1:1 ratio without squishing.
        Use 'contain' if you don't want any cropping. */
 		object-fit: cover;
+	}
+
+	.placeholder {
+		width: 100%;
+		height: 100%;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		background-color: #f0f0f0;
+		color: #888;
+		font-style: italic;
 	}
 </style>

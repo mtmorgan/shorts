@@ -72,8 +72,8 @@
 		>
 		and
 		<a
-			href="https://github.com/mtmorgan/shorts/blob/main/src/routes/mushrooms/MushroomSketch.svelte"
-			>MushroomSketch.svelte</a
+			href="https://github.com/mtmorgan/shorts/blob/main/src/routes/mushrooms/MushroomWalk.svelte"
+			>MushroomWalk.svelte</a
 		>.
 	</p>
 </Container>
