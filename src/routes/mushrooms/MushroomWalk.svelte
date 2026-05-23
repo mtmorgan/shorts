@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
-	import type { FileMap } from '$lib/types';
+	import type { FileMap } from './types';
 	import {
 		Carousel,
 		CarouselControl,

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { onMount, onDestroy } from 'svelte';
-	import type { FileMap } from '$lib/types';
+	import type { FileMap } from './types';
 	import type { Feature, Polygon } from 'geojson';
 	import 'leaflet/dist/leaflet.css';
 	import 'leaflet.markercluster/dist/MarkerCluster.css';
@@ -147,6 +147,11 @@
 	});
 </script>
 
+<p>
+	Click on a coloured dot to see the picture, or on a number to show pictures at
+	that location. Click on the picture to return to the map.
+</p>
+
 <div class="map-wrapper">
 	<div id="map-container" class="map-container" bind:this={mapElement}></div>
 	<button
@@ -161,6 +166,12 @@
 		{/if}
 	</button>
 </div>
+
+<p>
+	The dots are placed on top of a map showing location of our mushroom
+	adventure. The orange lines are the approximate boundary of our property.
+	Learn a little more about <a href="ourplace">our place</a>.
+</p>
 
 <style>
 	.map-wrapper {
