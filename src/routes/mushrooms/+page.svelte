@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Styles, Container } from '@sveltestrap/sveltestrap';
-	import MushroomMap from '$lib/MushroomMap.svelte';
-	import MushroomWalk from '$lib/MushroomWalk.svelte';
+	import MushroomMap from './MushroomMap.svelte';
+	import MushroomWalk from './MushroomWalk.svelte';
 </script>
 
 <Styles />
@@ -17,24 +17,7 @@
 		indicates multiple pictures.
 	</p>
 
-	<p>
-		Click on a dot to see the picture(s). Click again to see the next picture
-		(if more than one picture at the location of the dot) or to return to the
-		map.
-	</p>
-
 	<MushroomMap />
-
-	<p>
-		The dots are placed on top of a map showing location of our mushroom
-		adventure. The orange lines are the approximate boundary of our property.
-		Learn a little more about <a href="ourplace">our place</a>.
-	</p>
-
-	<p>
-		The slider below allows you to walk through the mushrooms. It's not as much
-		fun as clicking on the dots in the map.
-	</p>
 
 	<MushroomWalk />
 
@@ -64,20 +47,13 @@
 	</p>
 
 	<p>
-		The <a href="https://p5js.org">p5.js</a>
-		toolkit is used to render the plot and images, via the
-		<a href="https://p5-svelte.netlify.app/">p5-svelte</a> component. Maps are
-		drawn using <a href="https://leafletjs.com/">leaflet</a>.
+		Maps are drawn using <a href="https://leafletjs.com/">leaflet</a>. I
+		originally used <a href="https://p5js.org">p5.js</a> (via
+		<a href="https://p5-svelte.netlify.app/">p5-svelte</a>) but the current
+		version uses leaflet and CSS.
 	</p>
 
-	<p>
-		Google Gemini and the resources it used was helpful during many steps,
-		especially overlaying the P5 and leaflet components. Gemini was sometimes
-		obstinately unhelpful. A major struggle was realizing that my P5 code was
-		mostly event driven (<code>p5.noLoop()</code>) so the reactivity provided by
-		svelte was not actively updating the point locations when I zoomed or moved
-		the map.
-	</p>
+	<p>Google Gemini and other AI helped during many steps.</p>
 
 	<p>
 		Leaflet (topography map) attribution: Tiles &copy; Esri &mdash; Esri,
@@ -91,12 +67,12 @@
 			>GitHub</a
 		>, especially
 		<a
-			href="https://github.com/mtmorgan/shorts/blob/main/src/lib/MushroomMap.svelte"
+			href="https://github.com/mtmorgan/shorts/blob/main/src/routes/mushrooms/MushroomMap.svelte"
 			>MushroomMap.svelte</a
 		>
 		and
 		<a
-			href="https://github.com/mtmorgan/shorts/blob/main/src/lib/MushroomSketch.svelte"
+			href="https://github.com/mtmorgan/shorts/blob/main/src/routes/mushrooms/MushroomSketch.svelte"
 			>MushroomSketch.svelte</a
 		>.
 	</p>

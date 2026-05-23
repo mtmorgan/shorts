@@ -4,7 +4,7 @@ export interface FileMap {
 	FileName: string;
 	GPSLatitude: number;
 	GPSLongitude: number;
-	Who: string;
+	Who: 'Alison' | 'Martin' | 'Joan' | 'Katy';
 	// Calculated fields
 	x: number;
 	y: number;
