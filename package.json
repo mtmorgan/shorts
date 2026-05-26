@@ -30,6 +30,7 @@
 		"vite-plugin-devtools-json": "^1.0.0"
 	},
 	"dependencies": {
+		"@nazka/map-gl-js-spiderfy": "^2.0.0",
 		"@sveltestrap/sveltestrap": "^7.1.0",
 		"leaflet": "^1.9.4",
 		"leaflet.locatecontrol": "^0.85.1",

@@ -3,37 +3,40 @@
 	import { onMount, onDestroy } from 'svelte';
 	import type { FileMap } from './types';
 	import type { Feature, Polygon } from 'geojson';
-	import 'leaflet/dist/leaflet.css';
-	import 'leaflet.markercluster/dist/MarkerCluster.css';
-	import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+	import maplibregl, { type LngLatLike } from 'maplibre-gl'; // Import MapLibre GL JS
+	import 'maplibre-gl/dist/maplibre-gl.css'; // Import MapLibre CSS
+	import Spiderfy from '@nazka/map-gl-js-spiderfy';
 
 	// Data
-
-	// NOTE: 'as any' is a workaround to TypeScript issue with resolve()
 	const IMAGE_PREFIX: string = resolve('/images/' as any);
+	const ICON_PREFIX: string = resolve('/icons/' as any);
 	const mushroomsUrl: string = IMAGE_PREFIX + 'mushrooms.json';
 
-	let data: FileMap[] = $state<FileMap[]>([]);
-
-	// Image viewing
-
+	// State for image viewing
 	let isImageViewing = $state(false);
 	let selectedImageUrl: string = $state('');
 
+	// Map state
+	let mapContainer: HTMLDivElement;
+	let map: maplibregl.Map;
+	let mushroomData: FileMap[] = []; // Store fetched mushroom data
+
+	// --- Image Viewing Logic ---
 	const handleMarkerClick = (imgSrc: string) => {
 		selectedImageUrl = imgSrc;
-		isImageViewing = false;
+		isImageViewing = false; // Reset to ensure transition restarts
+		// Use a short timeout to allow a browser paint frame before showing the modal
 		setTimeout(() => {
 			isImageViewing = true;
-		}, 20); // 30ms is long enough to guarantee a browser paint frame
+		}, 20);
 	};
 
 	const closeZoom = () => {
 		isImageViewing = false;
 	};
 
-	// Fetch and filter data
-	const fetchData = async (url: string) => {
+	// --- Data Fetching ---
+	const fetchData = async (url: string): Promise<FileMap[]> => {
 		const reject = new Set(['IMG_2161.jpeg', 'IMG_5989.jpeg']);
 		const response = await fetch(url);
 		if (!response.ok) {
@@ -43,26 +46,9 @@
 		return data.filter((d: FileMap) => !reject.has(d.FileName));
 	};
 
-	// Map
-
-	// Leaflet map variables
-	let mapElement: HTMLDivElement;
-	let leafletMap: L.Map;
-	const lotColor = '#fc8d62';
-
+	// --- Map Initialization and Rendering ---
 	onMount(async () => {
-		const L = await import('leaflet');
-		// work around older leaflet.markercluster module structure
-		const markerClusterModule = (await import('leaflet.markercluster')) as any;
-		const MarkerClusterGroup = markerClusterModule.MarkerClusterGroup;
-
-		const topography = L.tileLayer(
-			'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
-			{
-				attribution: 'See notes for attribution',
-				crossOrigin: true
-			}
-		);
+		mushroomData = await fetchData(mushroomsUrl);
 
 		const lotBoundaries: Feature<Polygon> = {
 			type: 'Feature',
@@ -85,66 +71,186 @@
 				]
 			}
 		};
-		const lot = L.geoJSON(lotBoundaries, {
-			style: {
-				color: lotColor,
-				weight: 1,
-				fillOpacity: 0
-			}
-		});
+		const coordinates = lotBoundaries.geometry.coordinates[0] as LngLatLike[]; // Get the outer ring
+		const bounds = coordinates.reduce(
+			(bounds, coord) => bounds.extend(coord),
+			new maplibregl.LngLatBounds()
+		);
 
-		leafletMap = L.map(mapElement, {
-			zoomSnap: 0,
-			layers: [topography, lot]
-		}).fitBounds(lot.getBounds());
-
-		// Define a color map for the 'Who' field
 		const alpha = 0.6;
 		const colorMap: { [key in FileMap['Who']]: string } = {
-			Alison: `rgba(102, 194, 165, ${alpha})`, // Green, 70% opaque
-			Martin: `rgba(252, 141, 98, ${alpha})`, // Salmon, 70% opaque
-			Joan: `rgba(117, 112, 179, ${alpha})`, // Purple, 70% opaque
-			Katy: `rgba(231, 41, 138, ${alpha})` // Red, 70% opaque
+			Alison: `rgba(102, 194, 165, ${alpha})`, // Green, opaque
+			Martin: `rgba(252, 141, 98, ${alpha})`, // Salmon, opaque
+			Joan: `rgba(117, 112, 179, ${alpha})`, // Purple, opaque
+			Katy: `rgba(231, 41, 138, ${alpha})` // Red, opaque
 		};
 
-		let markers = new MarkerClusterGroup({
-			showCoverageOnHover: false,
-			maxClusterRadius: 6,
-			spiderLegPolylineOptions: { weight: 1 },
-			iconCreateFunction: (cluster: any) => {
-				return L.divIcon({
-					className: 'custom-marker',
-					html: `<div class="marker-circle" style="background-color: 'white';">${cluster.getChildCount()}</div>`,
-					iconSize: [16, 16], // Size of the circle
-					iconAnchor: [8, 8] // Point of the icon which will correspond to marker's location
-				});
+		const mapStyle: maplibregl.StyleSpecification = {
+			version: 8,
+			name: 'Mushroom Adventure Map',
+			glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+			sources: {
+				// Topography tile source
+				topo: {
+					type: 'raster', // Use 'raster' for tile layers
+					tiles: [
+						'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}'
+					],
+					tileSize: 256,
+					attribution: 'See notes for attribution'
+				},
+				// GeoJSON source for the property boundary
+				lotBoundaries: {
+					type: 'geojson',
+					data: lotBoundaries
+				},
+				// GeoJSON source for mushroom markers
+				mushrooms: {
+					type: 'geojson',
+					data: {
+						type: 'FeatureCollection',
+						features: mushroomData.map((d) => ({
+							type: 'Feature',
+							geometry: {
+								type: 'Point',
+								coordinates: [d.GPSLongitude, d.GPSLatitude]
+							},
+							properties: {
+								id: d.FileName, // Unique identifier
+								imageUrl: `${IMAGE_PREFIX}${d.FileName}`,
+								who: d.Who,
+								color: colorMap[d.Who]
+							}
+						}))
+					},
+					// Enable clustering
+					cluster: true,
+					clusterMaxZoom: 17,
+					clusterRadius: 6
+				}
+			},
+			layers: [
+				// Topography layer
+				{
+					id: 'topo-layer',
+					type: 'raster',
+					source: 'topo'
+				},
+				// Property boundary layer
+				{
+					id: 'lot-boundary-layer',
+					type: 'line',
+					source: 'lotBoundaries',
+					paint: {
+						'line-color': '#fc8d62',
+						'line-opacity': 1
+					}
+				}
+			]
+		};
+
+		map = new maplibregl.Map({
+			container: mapContainer,
+			style: mapStyle,
+			bounds: bounds,
+			maxZoom: 18
+		});
+
+		map.addControl(
+			new maplibregl.NavigationControl({
+				showZoom: true,
+				showCompass: false
+			})
+		);
+
+		map.on('load', async () => {
+			const { data: image } = await map.loadImage(
+				`${ICON_PREFIX}circle-sdf.png`
+			);
+			map.addImage('mushroom-cluster', image, { sdf: true });
+
+			map.addLayer({
+				id: 'mushroom-clusters',
+				type: 'symbol',
+				source: 'mushrooms',
+				filter: ['has', 'point_count'], // Only show clusters
+				layout: {
+					'icon-image': 'mushroom-cluster',
+					'icon-allow-overlap': true
+				},
+				paint: { 'icon-color': 'white' }
+			});
+
+			map.addLayer({
+				id: 'mushroom-cluster-count',
+				type: 'symbol',
+				source: 'mushrooms',
+				filter: ['has', 'point_count'],
+				layout: {
+					'text-field': '{point_count}',
+					'text-font': ['Noto Sans Regular'],
+					'text-size': 12,
+					'text-allow-overlap': true
+				},
+				paint: {
+					'text-color': '#000000'
+				}
+			});
+
+			map.addLayer({
+				id: 'mushroom-markers',
+				type: 'symbol',
+				source: 'mushrooms',
+				filter: ['!has', 'point_count'], // Individual markers (not clusters)
+				layout: {
+					'icon-image': 'mushroom-cluster',
+					'icon-allow-overlap': true
+				},
+				paint: {
+					'icon-color': ['get', 'color']
+				}
+			});
+
+			const spiderfy = new Spiderfy(map, {
+				onLeafClick: (feature) =>
+					handleMarkerClick(feature.properties.imageUrl),
+				closeOnLeafClick: false,
+				circleOptions: { leavesSeparation: 40 },
+				spiderLeavesPaint: {
+					'icon-color': ['get', 'color']
+				}
+			});
+
+			spiderfy.applyTo('mushroom-clusters');
+		});
+
+		// Event listener for clicking on markers
+		map.on('click', (e) => {
+			// Query for rendered features at the click point
+			const features = map.queryRenderedFeatures(e.point, {
+				layers: ['mushroom-markers'] // Check this layers
+			});
+
+			if (features.length > 0) {
+				const feature = features[0]; // Get the top-most feature
+				if (feature.properties && feature.properties.imageUrl) {
+					// It's an individual mushroom marker
+					handleMarkerClick(feature.properties.imageUrl);
+				}
 			}
 		});
 
-		data = await fetchData(mushroomsUrl);
-		data.forEach((d) => {
-			const color = colorMap[d.Who] || '#808080'; // Default to gray if name not in map
-			const icon = L.divIcon({
-				className: 'custom-marker',
-				html: `<div class="marker-circle" style="background-color: ${color};"></div>`,
-				iconSize: [12, 12], // Size of the circle
-				iconAnchor: [6, 6] // Point of the icon which will correspond to marker's location
-			});
-
-			const marker = L.marker([d.GPSLatitude, d.GPSLongitude], {
-				icon: icon
-			}).on('click', (e) => {
-				handleMarkerClick(`${IMAGE_PREFIX}${d.FileName}`);
-			});
-			markers.addLayer(marker);
+		// Prevent default map interactions if the image modal is open
+		map.on('click', (e) => {
+			if (isImageViewing) {
+				e.preventDefault();
+			}
 		});
-		leafletMap.addLayer(markers);
 	});
 
 	onDestroy(() => {
-		// Clean up Leaflet to prevent memory leaks
-		if (leafletMap) {
-			leafletMap.remove();
+		if (map) {
+			map.remove();
 		}
 	});
 </script>
@@ -155,7 +261,7 @@
 </p>
 
 <div class="map-wrapper">
-	<div id="map-container" class="map-container" bind:this={mapElement}></div>
+	<div id="map-container" class="map-container" bind:this={mapContainer}></div>
 	<button
 		type="button"
 		class="modal-backdrop"
@@ -179,7 +285,7 @@
 	.map-wrapper {
 		position: relative; /* Context for the modal */
 		width: min(800px, 100%);
-		aspect-ratio: 1 / 1;
+		aspect-ratio: 1 / 1; /* Maintain 1:1 aspect ratio */
 		margin-bottom: 1rem;
 	}
 
@@ -209,50 +315,17 @@
 	.modal-backdrop.active-backdrop {
 		opacity: 1;
 		visibility: visible;
+		pointer-events: auto; /* Make clickable when active */
 	}
 
-	/* Image transition state machine */
 	.mushroom-image {
 		position: absolute;
 		object-fit: cover;
 		pointer-events: auto;
-		top: 0px !important;
-		left: 0px !important;
+		top: 0 !important;
+		left: 0 !important;
 		width: 100% !important;
 		height: 100% !important;
 		border-radius: 0px;
-	}
-
-	/* Adjust Leaflet's default icon styling if needed */
-	:global(.custom-marker) {
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		border: none !important;
-		background: none !important;
-	}
-
-	:global(.marker-circle) {
-		width: 100%; /* Make it take the full width of its parent */
-		height: 100%; /* Make it take the full height of its parent */
-		border-radius: 50%;
-		display: flex !important;
-		align-items: center;
-		justify-content: center;
-		text-align: center;
-		box-sizing: border-box; /* Include padding and border in the element's total width and height */
-		border: 1px solid currentColor;
-		margin: 0;
-	}
-
-	:global(.marker-circle b) {
-		display: block;
-		line-height: 1;
-	}
-
-	/* Ensure the circle itself has dimensions */
-	:global(.custom-marker .marker-circle) {
-		width: 100%;
-		height: 100%;
 	}
 </style>
