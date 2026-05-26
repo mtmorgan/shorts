@@ -47,16 +47,17 @@
 	</p>
 
 	<p>
-		Maps are drawn using <a href="https://leafletjs.com/">leaflet</a>. I
-		originally used <a href="https://p5js.org">p5.js</a> (via
+		Maps were originally drawn using <a href="https://leafletjs.com/">leaflet</a
+		>
+		and <a href="https://p5js.org">p5.js</a> (via
 		<a href="https://p5-svelte.netlify.app/">p5-svelte</a>) but the current
-		version uses leaflet and CSS.
+		version uses <a href="https://maplibre.org/">MapLibre</a>.
 	</p>
 
 	<p>Google Gemini and other AI helped during many steps.</p>
 
 	<p>
-		Leaflet (topography map) attribution: Tiles &copy; Esri &mdash; Esri,
+		MapLibre (topography map) attribution: Tiles &copy; Esri &mdash; Esri,
 		DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase,
 		Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and
 		the GIS User Community.
