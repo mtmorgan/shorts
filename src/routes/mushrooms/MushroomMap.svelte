@@ -3,37 +3,40 @@
 	import { onMount, onDestroy } from 'svelte';
 	import type { FileMap } from './types';
 	import type { Feature, Polygon } from 'geojson';
-	import 'leaflet/dist/leaflet.css';
-	import 'leaflet.markercluster/dist/MarkerCluster.css';
-	import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+	import maplibregl, { type LngLatLike } from 'maplibre-gl'; // Import MapLibre GL JS
+	import 'maplibre-gl/dist/maplibre-gl.css'; // Import MapLibre CSS
+	import Spiderfy from '@nazka/map-gl-js-spiderfy';
 
 	// Data
-
-	// NOTE: 'as any' is a workaround to TypeScript issue with resolve()
 	const IMAGE_PREFIX: string = resolve('/images/' as any);
+	const ICON_PREFIX: string = resolve('/icons/' as any);
 	const mushroomsUrl: string = IMAGE_PREFIX + 'mushrooms.json';
 
-	let data: FileMap[] = $state<FileMap[]>([]);
-
-	// Image viewing
-
+	// State for image viewing
 	let isImageViewing = $state(false);
 	let selectedImageUrl: string = $state('');
 
+	// Map state
+	let mapContainer: HTMLDivElement;
+	let map: maplibregl.Map;
+	let mushroomData: FileMap[] = []; // Store fetched mushroom data
+
+	// --- Image Viewing Logic ---
 	const handleMarkerClick = (imgSrc: string) => {
 		selectedImageUrl = imgSrc;
-		isImageViewing = false;
+		isImageViewing = false; // Reset to ensure transition restarts
+		// Use a short timeout to allow a browser paint frame before showing the modal
 		setTimeout(() => {
 			isImageViewing = true;
-		}, 20); // 30ms is long enough to guarantee a browser paint frame
+		}, 20);
 	};
 
 	const closeZoom = () => {
 		isImageViewing = false;
 	};
 
-	// Fetch and filter data
-	const fetchData = async (url: string) => {
+	// --- Data Fetching ---
+	const fetchData = async (url: string): Promise<FileMap[]> => {
 		const reject = new Set(['IMG_2161.jpeg', 'IMG_5989.jpeg']);
 		const response = await fetch(url);
 		if (!response.ok) {
@@ -43,26 +46,54 @@
 		return data.filter((d: FileMap) => !reject.has(d.FileName));
 	};
 
-	// Map
+	// --- Map Initialization and Rendering ---
+	const makeArcGISPathsAbsolute = (style: any, baseUrl: string) => {
+		const resourcesUrl = baseUrl.replace(/\/styles\/?$/, '');
+		const absoluteBase = baseUrl.replace(/\/resources\/styles\/?$/, '');
 
-	// Leaflet map variables
-	let mapElement: HTMLDivElement;
-	let leafletMap: L.Map;
-	const lotColor = '#fc8d62';
+		const fixPath = (url: string) => {
+			if (url.startsWith('../..')) {
+				return url.replace('../..', absoluteBase);
+			}
+			if (url.startsWith('..')) {
+				// This would point to /resources/ - usually incorrect for ArcGIS sources
+				return url.replace('..', resourcesUrl);
+			}
+			return url;
+		};
+
+		if (style.sprite) style.sprite = fixPath(style.sprite);
+		if (style.glyphs) style.glyphs = fixPath(style.glyphs);
+		if (style.sources) {
+			for (const source in style.sources) {
+				if (style.sources[source].url) {
+					style.sources[source].url = fixPath(style.sources[source].url);
+				}
+			}
+		}
+
+		return style;
+	};
 
 	onMount(async () => {
-		const L = await import('leaflet');
-		// work around older leaflet.markercluster module structure
-		const markerClusterModule = (await import('leaflet.markercluster')) as any;
-		const MarkerClusterGroup = markerClusterModule.MarkerClusterGroup;
+		mushroomData = await fetchData(mushroomsUrl);
 
-		const topography = L.tileLayer(
-			'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
-			{
-				attribution: 'See notes for attribution',
-				crossOrigin: true
-			}
-		);
+		// Map
+
+		const baseUrl =
+			'https://tiles.arcgis.com/tiles/TJH5KDher0W13Kgo/arcgis/rest/services/Ontario_Vector_Topographic_Data_Cache_Service/VectorTileServer/resources/styles';
+		const styleUrl = `${baseUrl}/root.json?f=pjson`;
+		const rawStyle = await (await fetch(styleUrl)).json();
+		const style = makeArcGISPathsAbsolute(rawStyle, baseUrl);
+
+		style.sources.esri['tiles'] = [
+			'https://tiles.arcgis.com/tiles/TJH5KDher0W13Kgo/arcgis/rest/services/Ontario_Vector_Topographic_Data_Cache_Service/VectorTileServer/tile/{z}/{y}/{x}.pbf'
+		];
+
+		style.sources.esri['attribution'] =
+			'<a href="https://geohub.lio.gov.on.ca/maps/mnrf::ontario-vector-topographic-data-cache/about">Ontario Vector Topographic Data Cache</a>';
+
+		// Lot boundaries
 
 		const lotBoundaries: Feature<Polygon> = {
 			type: 'Feature',
@@ -73,78 +104,175 @@
 				type: 'Polygon',
 				coordinates: [
 					[
-						[-79.88031, 43.89948],
-						[-79.8814, 43.89844],
+						[-79.88035, 43.89948],
+						[-79.88149, 43.89841],
 						[-79.87843, 43.89613],
 						[-79.87626, 43.89452],
 						[-79.87114, 43.89904],
 						[-79.87342, 43.90079],
 						[-79.87692, 43.89754],
-						[-79.88031, 43.89948]
+						[-79.88035, 43.89948]
 					]
 				]
 			}
 		};
-		const lot = L.geoJSON(lotBoundaries, {
-			style: {
-				color: lotColor,
-				weight: 1,
-				fillOpacity: 0
-			}
-		});
+		const coordinates = lotBoundaries.geometry.coordinates[0] as LngLatLike[]; // Get the outer ring
+		const bounds = coordinates.reduce(
+			(bounds, coord) => bounds.extend(coord),
+			new maplibregl.LngLatBounds()
+		);
 
-		leafletMap = L.map(mapElement, {
-			zoomSnap: 0,
-			layers: [topography, lot]
-		}).fitBounds(lot.getBounds());
-
-		// Define a color map for the 'Who' field
-		const alpha = 0.6;
-		const colorMap: { [key in FileMap['Who']]: string } = {
-			Alison: `rgba(102, 194, 165, ${alpha})`, // Green, 70% opaque
-			Martin: `rgba(252, 141, 98, ${alpha})`, // Salmon, 70% opaque
-			Joan: `rgba(117, 112, 179, ${alpha})`, // Purple, 70% opaque
-			Katy: `rgba(231, 41, 138, ${alpha})` // Red, 70% opaque
+		style.sources['lotBoundaries'] = {
+			type: 'geojson',
+			data: lotBoundaries
 		};
 
-		let markers = new MarkerClusterGroup({
-			showCoverageOnHover: false,
-			maxClusterRadius: 6,
-			spiderLegPolylineOptions: { weight: 1 },
-			iconCreateFunction: (cluster: any) => {
-				return L.divIcon({
-					className: 'custom-marker',
-					html: `<div class="marker-circle" style="background-color: 'white';">${cluster.getChildCount()}</div>`,
-					iconSize: [16, 16], // Size of the circle
-					iconAnchor: [8, 8] // Point of the icon which will correspond to marker's location
-				});
+		style.layers.push({
+			id: 'lot-boundary-layer',
+			type: 'line',
+			source: 'lotBoundaries',
+			paint: {
+				'line-color': '#fc8d62',
+				'line-opacity': 1
 			}
 		});
 
-		data = await fetchData(mushroomsUrl);
-		data.forEach((d) => {
-			const color = colorMap[d.Who] || '#808080'; // Default to gray if name not in map
-			const icon = L.divIcon({
-				className: 'custom-marker',
-				html: `<div class="marker-circle" style="background-color: ${color};"></div>`,
-				iconSize: [12, 12], // Size of the circle
-				iconAnchor: [6, 6] // Point of the icon which will correspond to marker's location
+		// Mushrooms
+
+		const alpha = 1;
+		const colorMap: { [key in FileMap['Who']]: string } = {
+			Alison: `rgba(102, 194, 165, ${alpha})`, // Green, opaque
+			Martin: `rgba(252, 141, 98, ${alpha})`, // Salmon, opaque
+			Joan: `rgba(117, 112, 179, ${alpha})`, // Purple, opaque
+			Katy: `rgba(231, 41, 138, ${alpha})` // Red, opaque
+		};
+
+		style.sources['mushrooms'] = {
+			type: 'geojson',
+			data: {
+				type: 'FeatureCollection',
+				features: mushroomData.map((d) => ({
+					type: 'Feature',
+					geometry: {
+						type: 'Point',
+						coordinates: [d.GPSLongitude, d.GPSLatitude]
+					},
+					properties: {
+						id: d.FileName, // Unique identifier
+						imageUrl: `${IMAGE_PREFIX}${d.FileName}`,
+						who: d.Who,
+						color: colorMap[d.Who]
+					}
+				}))
+			},
+			// Enable clustering
+			cluster: true,
+			clusterMaxZoom: 17,
+			clusterRadius: 6
+		};
+
+		style.layers.push(
+			{
+				id: 'mushroom-clusters',
+				type: 'symbol',
+				source: 'mushrooms',
+				filter: ['has', 'point_count'], // Only show clusters
+				layout: {
+					'icon-image': 'mushroom-cluster',
+					'icon-allow-overlap': true
+				},
+				paint: { 'icon-color': 'white' }
+			},
+			{
+				id: 'mushroom-markers',
+				type: 'symbol',
+				source: 'mushrooms',
+				filter: ['!has', 'point_count'], // Individual markers (not clusters)
+				layout: {
+					'icon-image': 'mushroom-cluster',
+					'icon-allow-overlap': true
+				},
+				paint: {
+					'icon-color': ['get', 'color']
+				}
+			},
+			{
+				id: 'mushroom-cluster-count',
+				type: 'symbol',
+				source: 'mushrooms',
+				filter: ['has', 'point_count'],
+				layout: {
+					'text-field': '{point_count}',
+					'text-font': ['Arial Regular'],
+					'text-size': 12,
+					'text-allow-overlap': true
+				},
+				paint: {
+					'text-color': '#000000'
+				}
+			}
+		);
+
+		// Map
+
+		map = new maplibregl.Map({
+			container: mapContainer,
+			style: style,
+			bounds: bounds
+		});
+
+		map.addControl(
+			new maplibregl.NavigationControl({
+				showZoom: true,
+				showCompass: false
+			})
+		);
+
+		map.on('load', async () => {
+			const { data: image } = await map.loadImage(
+				`${ICON_PREFIX}circle-sdf.png`
+			);
+			map.addImage('mushroom-cluster', image, { sdf: true });
+
+			const spiderfy = new Spiderfy(map, {
+				onLeafClick: (feature) =>
+					handleMarkerClick(feature.properties.imageUrl),
+				closeOnLeafClick: false,
+				circleOptions: { leavesSeparation: 40 },
+				spiderLeavesPaint: {
+					'icon-color': ['get', 'color']
+				}
+			});
+			spiderfy.applyTo('mushroom-clusters');
+		});
+
+		// Event listener for clicking on markers
+		map.on('click', (e) => {
+			// Query for rendered features at the click point
+			const features = map.queryRenderedFeatures(e.point, {
+				layers: ['mushroom-markers'] // Check this layers
 			});
 
-			const marker = L.marker([d.GPSLatitude, d.GPSLongitude], {
-				icon: icon
-			}).on('click', (e) => {
-				handleMarkerClick(`${IMAGE_PREFIX}${d.FileName}`);
-			});
-			markers.addLayer(marker);
+			if (features.length > 0) {
+				const feature = features[0]; // Get the top-most feature
+				if (feature.properties && feature.properties.imageUrl) {
+					// It's an individual mushroom marker
+					handleMarkerClick(feature.properties.imageUrl);
+				}
+			}
 		});
-		leafletMap.addLayer(markers);
+
+		// Event listener for clicking on image -- prevent default map interactions
+		map.on('click', (e) => {
+			if (isImageViewing) {
+				e.preventDefault();
+			}
+		});
 	});
 
 	onDestroy(() => {
-		// Clean up Leaflet to prevent memory leaks
-		if (leafletMap) {
-			leafletMap.remove();
+		if (map) {
+			map.remove();
 		}
 	});
 </script>
@@ -155,7 +283,7 @@
 </p>
 
 <div class="map-wrapper">
-	<div id="map-container" class="map-container" bind:this={mapElement}></div>
+	<div id="map-container" class="map-container" bind:this={mapContainer}></div>
 	<button
 		type="button"
 		class="modal-backdrop"
@@ -179,7 +307,7 @@
 	.map-wrapper {
 		position: relative; /* Context for the modal */
 		width: min(800px, 100%);
-		aspect-ratio: 1 / 1;
+		aspect-ratio: 1 / 1; /* Maintain 1:1 aspect ratio */
 		margin-bottom: 1rem;
 	}
 
@@ -209,50 +337,17 @@
 	.modal-backdrop.active-backdrop {
 		opacity: 1;
 		visibility: visible;
+		pointer-events: auto; /* Make clickable when active */
 	}
 
-	/* Image transition state machine */
 	.mushroom-image {
 		position: absolute;
 		object-fit: cover;
 		pointer-events: auto;
-		top: 0px !important;
-		left: 0px !important;
+		top: 0 !important;
+		left: 0 !important;
 		width: 100% !important;
 		height: 100% !important;
 		border-radius: 0px;
-	}
-
-	/* Adjust Leaflet's default icon styling if needed */
-	:global(.custom-marker) {
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		border: none !important;
-		background: none !important;
-	}
-
-	:global(.marker-circle) {
-		width: 100%; /* Make it take the full width of its parent */
-		height: 100%; /* Make it take the full height of its parent */
-		border-radius: 50%;
-		display: flex !important;
-		align-items: center;
-		justify-content: center;
-		text-align: center;
-		box-sizing: border-box; /* Include padding and border in the element's total width and height */
-		border: 1px solid currentColor;
-		margin: 0;
-	}
-
-	:global(.marker-circle b) {
-		display: block;
-		line-height: 1;
-	}
-
-	/* Ensure the circle itself has dimensions */
-	:global(.custom-marker .marker-circle) {
-		width: 100%;
-		height: 100%;
 	}
 </style>
