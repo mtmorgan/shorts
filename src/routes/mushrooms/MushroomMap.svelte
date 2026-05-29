@@ -47,8 +47,53 @@
 	};
 
 	// --- Map Initialization and Rendering ---
+	const makeArcGISPathsAbsolute = (style: any, baseUrl: string) => {
+		const resourcesUrl = baseUrl.replace(/\/styles\/?$/, '');
+		const absoluteBase = baseUrl.replace(/\/resources\/styles\/?$/, '');
+
+		const fixPath = (url: string) => {
+			if (url.startsWith('../..')) {
+				return url.replace('../..', absoluteBase);
+			}
+			if (url.startsWith('..')) {
+				// This would point to /resources/ - usually incorrect for ArcGIS sources
+				return url.replace('..', resourcesUrl);
+			}
+			return url;
+		};
+
+		if (style.sprite) style.sprite = fixPath(style.sprite);
+		if (style.glyphs) style.glyphs = fixPath(style.glyphs);
+		if (style.sources) {
+			for (const source in style.sources) {
+				if (style.sources[source].url) {
+					style.sources[source].url = fixPath(style.sources[source].url);
+				}
+			}
+		}
+
+		return style;
+	};
+
 	onMount(async () => {
 		mushroomData = await fetchData(mushroomsUrl);
+
+		// Map
+
+		const baseUrl =
+			'https://tiles.arcgis.com/tiles/TJH5KDher0W13Kgo/arcgis/rest/services/Ontario_Vector_Topographic_Data_Cache_Service/VectorTileServer/resources/styles';
+		const styleUrl = `${baseUrl}/root.json?f=pjson`;
+		const rawStyle = await (await fetch(styleUrl)).json();
+		const style = makeArcGISPathsAbsolute(rawStyle, baseUrl);
+
+		style.sources.esri['tiles'] = [
+			'https://tiles.arcgis.com/tiles/TJH5KDher0W13Kgo/arcgis/rest/services/Ontario_Vector_Topographic_Data_Cache_Service/VectorTileServer/tile/{z}/{y}/{x}.pbf'
+		];
+
+		style.sources.esri['attribution'] =
+			'<a href="https://geohub.lio.gov.on.ca/maps/mnrf::ontario-vector-topographic-data-cache/about">Ontario Vector Topographic Data Cache</a>';
+
+		// Lot boundaries
 
 		const lotBoundaries: Feature<Polygon> = {
 			type: 'Feature',
@@ -59,14 +104,14 @@
 				type: 'Polygon',
 				coordinates: [
 					[
-						[-79.88031, 43.89948],
-						[-79.8814, 43.89844],
+						[-79.88035, 43.89948],
+						[-79.88149, 43.89841],
 						[-79.87843, 43.89613],
 						[-79.87626, 43.89452],
 						[-79.87114, 43.89904],
 						[-79.87342, 43.90079],
 						[-79.87692, 43.89754],
-						[-79.88031, 43.89948]
+						[-79.88035, 43.89948]
 					]
 				]
 			}
@@ -77,7 +122,24 @@
 			new maplibregl.LngLatBounds()
 		);
 
-		const alpha = 0.6;
+		style.sources['lotBoundaries'] = {
+			type: 'geojson',
+			data: lotBoundaries
+		};
+
+		style.layers.push({
+			id: 'lot-boundary-layer',
+			type: 'line',
+			source: 'lotBoundaries',
+			paint: {
+				'line-color': '#fc8d62',
+				'line-opacity': 1
+			}
+		});
+
+		// Mushrooms
+
+		const alpha = 1;
 		const colorMap: { [key in FileMap['Who']]: string } = {
 			Alison: `rgba(102, 194, 165, ${alpha})`, // Green, opaque
 			Martin: `rgba(252, 141, 98, ${alpha})`, // Salmon, opaque
@@ -85,75 +147,78 @@
 			Katy: `rgba(231, 41, 138, ${alpha})` // Red, opaque
 		};
 
-		const mapStyle: maplibregl.StyleSpecification = {
-			version: 8,
-			name: 'Mushroom Adventure Map',
-			glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
-			sources: {
-				// Topography tile source
-				topo: {
-					type: 'raster', // Use 'raster' for tile layers
-					tiles: [
-						'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}'
-					],
-					tileSize: 256,
-					attribution: 'See notes for attribution'
-				},
-				// GeoJSON source for the property boundary
-				lotBoundaries: {
-					type: 'geojson',
-					data: lotBoundaries
-				},
-				// GeoJSON source for mushroom markers
-				mushrooms: {
-					type: 'geojson',
-					data: {
-						type: 'FeatureCollection',
-						features: mushroomData.map((d) => ({
-							type: 'Feature',
-							geometry: {
-								type: 'Point',
-								coordinates: [d.GPSLongitude, d.GPSLatitude]
-							},
-							properties: {
-								id: d.FileName, // Unique identifier
-								imageUrl: `${IMAGE_PREFIX}${d.FileName}`,
-								who: d.Who,
-								color: colorMap[d.Who]
-							}
-						}))
+		style.sources['mushrooms'] = {
+			type: 'geojson',
+			data: {
+				type: 'FeatureCollection',
+				features: mushroomData.map((d) => ({
+					type: 'Feature',
+					geometry: {
+						type: 'Point',
+						coordinates: [d.GPSLongitude, d.GPSLatitude]
 					},
-					// Enable clustering
-					cluster: true,
-					clusterMaxZoom: 17,
-					clusterRadius: 6
+					properties: {
+						id: d.FileName, // Unique identifier
+						imageUrl: `${IMAGE_PREFIX}${d.FileName}`,
+						who: d.Who,
+						color: colorMap[d.Who]
+					}
+				}))
+			},
+			// Enable clustering
+			cluster: true,
+			clusterMaxZoom: 17,
+			clusterRadius: 6
+		};
+
+		style.layers.push(
+			{
+				id: 'mushroom-clusters',
+				type: 'symbol',
+				source: 'mushrooms',
+				filter: ['has', 'point_count'], // Only show clusters
+				layout: {
+					'icon-image': 'mushroom-cluster',
+					'icon-allow-overlap': true
+				},
+				paint: { 'icon-color': 'white' }
+			},
+			{
+				id: 'mushroom-markers',
+				type: 'symbol',
+				source: 'mushrooms',
+				filter: ['!has', 'point_count'], // Individual markers (not clusters)
+				layout: {
+					'icon-image': 'mushroom-cluster',
+					'icon-allow-overlap': true
+				},
+				paint: {
+					'icon-color': ['get', 'color']
 				}
 			},
-			layers: [
-				// Topography layer
-				{
-					id: 'topo-layer',
-					type: 'raster',
-					source: 'topo'
+			{
+				id: 'mushroom-cluster-count',
+				type: 'symbol',
+				source: 'mushrooms',
+				filter: ['has', 'point_count'],
+				layout: {
+					'text-field': '{point_count}',
+					'text-font': ['Arial Regular'],
+					'text-size': 12,
+					'text-allow-overlap': true
 				},
-				// Property boundary layer
-				{
-					id: 'lot-boundary-layer',
-					type: 'line',
-					source: 'lotBoundaries',
-					paint: {
-						'line-color': '#fc8d62',
-						'line-opacity': 1
-					}
+				paint: {
+					'text-color': '#000000'
 				}
-			]
-		};
+			}
+		);
+
+		// Map
 
 		map = new maplibregl.Map({
 			container: mapContainer,
-			style: mapStyle,
-			bounds: bounds,
-			maxZoom: 18
+			style: style,
+			bounds: bounds
 		});
 
 		map.addControl(
@@ -169,48 +234,6 @@
 			);
 			map.addImage('mushroom-cluster', image, { sdf: true });
 
-			map.addLayer({
-				id: 'mushroom-clusters',
-				type: 'symbol',
-				source: 'mushrooms',
-				filter: ['has', 'point_count'], // Only show clusters
-				layout: {
-					'icon-image': 'mushroom-cluster',
-					'icon-allow-overlap': true
-				},
-				paint: { 'icon-color': 'white' }
-			});
-
-			map.addLayer({
-				id: 'mushroom-cluster-count',
-				type: 'symbol',
-				source: 'mushrooms',
-				filter: ['has', 'point_count'],
-				layout: {
-					'text-field': '{point_count}',
-					'text-font': ['Noto Sans Regular'],
-					'text-size': 12,
-					'text-allow-overlap': true
-				},
-				paint: {
-					'text-color': '#000000'
-				}
-			});
-
-			map.addLayer({
-				id: 'mushroom-markers',
-				type: 'symbol',
-				source: 'mushrooms',
-				filter: ['!has', 'point_count'], // Individual markers (not clusters)
-				layout: {
-					'icon-image': 'mushroom-cluster',
-					'icon-allow-overlap': true
-				},
-				paint: {
-					'icon-color': ['get', 'color']
-				}
-			});
-
 			const spiderfy = new Spiderfy(map, {
 				onLeafClick: (feature) =>
 					handleMarkerClick(feature.properties.imageUrl),
@@ -220,7 +243,6 @@
 					'icon-color': ['get', 'color']
 				}
 			});
-
 			spiderfy.applyTo('mushroom-clusters');
 		});
 
@@ -240,7 +262,7 @@
 			}
 		});
 
-		// Prevent default map interactions if the image modal is open
+		// Event listener for clicking on image -- prevent default map interactions
 		map.on('click', (e) => {
 			if (isImageViewing) {
 				e.preventDefault();

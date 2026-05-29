@@ -57,13 +57,6 @@
 	<p>Google Gemini and other AI helped during many steps.</p>
 
 	<p>
-		MapLibre (topography map) attribution: Tiles &copy; Esri &mdash; Esri,
-		DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase,
-		Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and
-		the GIS User Community.
-	</p>
-
-	<p>
 		The code is available on <a href="https://github.com/mtmorgan/shorts"
 			>GitHub</a
 		>, especially
