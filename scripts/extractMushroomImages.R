@@ -1,4 +1,4 @@
-setwd("/Users/mtmorgan/a/git/shorts/R")
+setwd("/Users/mtmorgan/a/git/shorts/scripts")
 library(dplyr)
 requireNamespace("exiftoolr")
 requireNamespace("jsonlite")
@@ -26,7 +26,7 @@ img_tbl <-
         CreateDate = as.POSIXct(CreateDate, format = "%Y:%m:%d %H:%M:%S")
     ) |>
     select(FileName, CreateDate, Who, GPSLatitude, GPSLongitude)
-    
+
 jsonlite::write_json(
     img_tbl,
     json_path
