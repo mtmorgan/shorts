@@ -23,7 +23,7 @@
 			animationState = 'visible-right';
 		} catch (error) {
 			console.error('Failed to fetch bird photos:', error); // Log the error for debugging
-			errorMessage = `Could not load photo for ${birdCommonName}. Please try again.`;
+			errorMessage = error;
 			imageUrl = ''; // Clear any previous image
 			showImage = false; // Hide image if there was an error
 			animationState = 'hidden';

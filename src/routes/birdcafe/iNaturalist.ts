@@ -61,6 +61,6 @@ export const getBirdPhotos = async (
 		return data.results[0].default_photo;
 	} catch (error) {
 		console.error('Error querying iNaturalist API:', error);
-		return {} as TaxonPhoto;
+		throw error;
 	}
 };
