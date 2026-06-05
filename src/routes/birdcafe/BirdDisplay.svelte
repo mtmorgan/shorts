@@ -7,12 +7,8 @@
 	let imageUrl = '';
 	let showImage = false;
 	let animationState = 'hidden';
-	let timeoutId: number = 0;
+	let timeoutId: NodeJS.Timeout;
 	let errorMessage = '';
-
-	// // Replace with your desired image URL
-	// const FETCH_IMAGE_URL =
-	// 	'https://via.placeholder.com/300x200.png?text=Fetched+Image';
 
 	const fetchAndDisplayImage = async () => {
 		errorMessage = '';
@@ -23,7 +19,7 @@
 			animationState = 'visible-right';
 		} catch (error) {
 			console.error('Failed to fetch bird photos:', error); // Log the error for debugging
-			errorMessage = error;
+			errorMessage = error as string;
 			imageUrl = ''; // Clear any previous image
 			showImage = false; // Hide image if there was an error
 			animationState = 'hidden';

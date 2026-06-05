@@ -22,5 +22,8 @@ Thumbs.db
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
+# Google Cloud Credentials
+config/google-sheets-credentials.json
+
 # Other
 .vscode
