@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { Button, Input, FormGroup, Label } from '@sveltestrap/sveltestrap';
+	import { Button, Icon, ButtonGroup } from '@sveltestrap/sveltestrap';
 	import { getBirdPhotos } from './iNaturalist';
-	import type { TaxonPhoto, Birds, BirdDisplayProps } from './types';
+	import type { TaxonPhoto, BirdDisplayProps } from './types';
 
 	interface DisplayPhoto extends TaxonPhoto {
 		id: number;
@@ -11,13 +11,24 @@
 	}
 
 	let { birds }: BirdDisplayProps = $props();
-	let selectedDate = $state(Object.keys(birds)[0]);
 	let birdCommonName = $state('');
 	let activeImages = $state<DisplayPhoto[]>([]);
 	let nextId = 0;
 	let status = $state({ date: '', progress: '', name: '' });
+	let currentIndex = $state(0);
 	let isRunning = $state(false);
+	let abortController: AbortController | null;
 	let errorMessage = $state('');
+
+	const delay = (ms: number, signal: AbortSignal) =>
+		new Promise((resolve, reject) => {
+			const timeout = setTimeout(resolve, ms);
+			signal.addEventListener('abort', () => {
+				isRunning = false;
+				clearTimeout(timeout);
+				reject(new DOMException('Aborted', 'AbortError'));
+			});
+		});
 
 	const formatBirdName = (name: string): string => {
 		if (!name.includes(',')) return name;
@@ -27,6 +38,7 @@
 	};
 
 	const fetchAndDisplayImage = async (birdCommonName: string) => {
+		if (!isRunning) return;
 		errorMessage = '';
 		try {
 			const photoData = await getBirdPhotos(birdCommonName);
@@ -45,77 +57,146 @@
 				activeImages = activeImages.filter((img) => img.id !== newImage.id);
 			}, 10000);
 		} catch (error) {
-			console.error('Failed to fetch bird photos:', error); // Log the error for debugging
-			errorMessage = error as string;
+			console.error(`Failed to fetch '${birdCommonName}': ${error}`); // Log the error for debugging
+			errorMessage = `'${birdCommonName}' ${error}`;
 		}
 	};
 
-	const runSequenceForDate = async (date: string) => {
+	const runSequenceForDate = async (date: string, signal: AbortSignal) => {
 		const list = birds[date];
 		if (!list) return;
 
-		const TOTAL_DURATION_MS = 60000;
-		const interval = TOTAL_DURATION_MS / list.length;
+		try {
+			// Announce the date and number of observations
+			status.date = date;
+			status.name = `${birds[date].length} observations`;
+			await delay(1000, signal);
+			status.date = '';
 
-		for (let i = 0; i < list.length; i++) {
-			birdCommonName = list[i];
-			status.progress = `${i + 1} / ${list.length}`;
-			status.name = formatBirdName(birdCommonName);
-			await fetchAndDisplayImage(birdCommonName);
-			await new Promise((resolve) => setTimeout(resolve, interval));
+			// Run the sequence
+			const TOTAL_DURATION_MS = 10000;
+			const interval = TOTAL_DURATION_MS / list.length;
+
+			for (let i = 0; i < list.length; i++) {
+				if (signal.aborted) return;
+
+				birdCommonName = list[i];
+				status.progress = `${i + 1} / ${list.length}`;
+				status.name = formatBirdName(birdCommonName);
+				await fetchAndDisplayImage(birdCommonName);
+				await delay(interval, signal);
+			}
+			status.progress = '';
+			status.name = '';
+		} catch (e) {
+			return; // Exit immediately if aborted
 		}
-		status.progress = '';
-		status.name = '';
 	};
 
-	const runAllDates = async () => {
-		isRunning = true;
-		try {
-			const allDates = Object.keys(birds);
+	const allDates = Object.keys(birds);
 
-			for (const date of allDates) {
-				status.date = date;
-				status.name = `${birds[date].length} observations`;
-				await new Promise((resolve) => setTimeout(resolve, 10000));
-				status.date = '';
-				await runSequenceForDate(date);
-			}
-		} finally {
-			isRunning = false;
+	const resetNavigation = () => {
+		isRunning = false;
+		abortController?.abort(); // This cancels the loop in progress
+		abortController = null; // Nullify the controller
+		activeImages = [];
+		status = { date: '', progress: '', name: '' };
+	};
+
+	const jumpTo = (index: number) => {
+		resetNavigation();
+		currentIndex = index;
+		if (!isRunning) {
+			runAllDates(currentIndex);
 		}
+	};
+
+	const navigate = (direction: 'prev' | 'next') => {
+		resetNavigation();
+		const delta = direction === 'next' ? 1 : -1;
+		currentIndex = Math.max(
+			0,
+			Math.min(currentIndex + delta, allDates.length - 1)
+		);
+		runAllDates(currentIndex);
+	};
+
+	const togglePlay = () => {
+		if (isRunning) {
+			isRunning = false;
+			abortController?.abort();
+			abortController = null;
+		} else {
+			runAllDates(currentIndex);
+		}
+	};
+
+	const runAllDates = async (startIndex: number) => {
+		if (isRunning) return;
+
+		resetNavigation();
+		abortController = new AbortController();
+		const signal = abortController.signal;
+		isRunning = true;
+		currentIndex = startIndex;
+
+		while (currentIndex < allDates.length && isRunning) {
+			await runSequenceForDate(allDates[currentIndex], signal);
+			if (signal.aborted) return;
+			if (isRunning && currentIndex < allDates.length - 1) {
+				currentIndex++;
+			} else {
+				break;
+			}
+		}
+		isRunning = false;
 	};
 
 	// Clean up the timeouts when the component is unmounted
 	onMount(() => {
+		// runAllDates(0);
 		return () => {
 			// FIXME: zero activeImages
 		};
 	});
 </script>
 
-<div class="container mt-4">
-	<div class="d-flex justify-content-between align-items-center mb-3">
-		<Button color="primary" disabled={isRunning} on:click={runAllDates}
-			>Start</Button
-		>
-		<div class="text-end">
-			{#if status.date || status.progress}
-				<div class="fw-bold">
-					{status.date}
-					{status.progress}
-				</div>
-				<div class="text-muted">
-					{status.name}
-				</div>
-			{/if}
-		</div>
-	</div>
+<ButtonGroup>
+	<Button onclick={() => jumpTo(0)}>
+		<Icon name="skip-start" />
+	</Button>
 
-	<div class="mb-3 text-end">
-		{#if errorMessage}
-			<div class="invalid-feedback">{errorMessage}</div>
+	<Button onclick={() => navigate('prev')}>
+		<Icon name="skip-backward" />
+	</Button>
+
+	<Button color="primary" onclick={togglePlay}>
+		{#if isRunning}
+			<Icon name="pause" />
+		{:else}
+			<Icon name="play" />
 		{/if}
-	</div>
+	</Button>
+
+	<Button onclick={() => navigate('next')}>
+		<Icon name="skip-forward" />
+	</Button>
+
+	<Button onclick={() => jumpTo(allDates.length - 1)}>
+		<Icon name="skip-end" />
+	</Button>
+</ButtonGroup>
+
+<div class="text-end">
+	{#if status.date || status.progress}
+		<div class="fw-bold">
+			{status.date}
+			{status.progress}
+		</div>
+		<div class="text-muted">
+			{status.name}
+		</div>
+	{/if}
 
 	<div class="animation-boundary">
 		{#each activeImages as img (img.id)}
@@ -129,11 +210,11 @@
 						<img
 							src={img.medium_url}
 							alt="Dynamically loaded"
-							class="img-fluid rounded"
+							class="img-fluid rounded-top"
 						/>
 					{/if}
 					<div class="photo-info p-2 bg-dark text-white">
-						<p class="mb-0 small fw-bold">
+						<p class="mb-0" style="font-size: 0.65rem;">
 							{img.name}
 							{img.attribution}
 						</p>
@@ -141,6 +222,12 @@
 				</div>
 			{/if}
 		{/each}
+	</div>
+
+	<div class="mb-3 text-end">
+		{#if errorMessage}
+			<div class="invalid-feedback">{errorMessage}</div>
+		{/if}
 	</div>
 </div>
 
@@ -164,7 +251,7 @@
 		top: 50%; /* Vertically center (adjust as needed) */
 		transform: translateY(-50%); /* Fine-tune vertical centering */
 		width: 300px; /* Set a fixed width for the image container */
-		max-width: 90%; /* Ensure it doesn't overflow on smaller screens */
+		max-width: 50%; /* Ensure it doesn't overflow on smaller screens */
 		z-index: 10; /* Ensure it appears above other content */
 		opacity: 0%;
 		transition: opacity 0.25s ease-in-out; /* Smooth fade-in/out */
