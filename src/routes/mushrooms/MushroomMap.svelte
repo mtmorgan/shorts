@@ -2,8 +2,9 @@
 	import { resolve } from '$app/paths';
 	import { onMount, onDestroy } from 'svelte';
 	import type { FileMap } from './types';
-	import type { Feature, Polygon } from 'geojson';
-	import maplibregl, { type LngLatLike } from 'maplibre-gl'; // Import MapLibre GL JS
+	import maplibregl from 'maplibre-gl'; // Import MapLibre GL JS
+	import { getStyledMap } from '$lib/map/baseLayer';
+	import { getLotBounds } from '$lib/map/lotBoundaries';
 	import 'maplibre-gl/dist/maplibre-gl.css'; // Import MapLibre CSS
 	import Spiderfy from '@nazka/map-gl-js-spiderfy';
 
@@ -46,96 +47,15 @@
 		return data.filter((d: FileMap) => !reject.has(d.FileName));
 	};
 
-	// --- Map Initialization and Rendering ---
-	const makeArcGISPathsAbsolute = (style: any, baseUrl: string) => {
-		const resourcesUrl = baseUrl.replace(/\/styles\/?$/, '');
-		const absoluteBase = baseUrl.replace(/\/resources\/styles\/?$/, '');
-
-		const fixPath = (url: string) => {
-			if (url.startsWith('../..')) {
-				return url.replace('../..', absoluteBase);
-			}
-			if (url.startsWith('..')) {
-				// This would point to /resources/ - usually incorrect for ArcGIS sources
-				return url.replace('..', resourcesUrl);
-			}
-			return url;
-		};
-
-		if (style.sprite) style.sprite = fixPath(style.sprite);
-		if (style.glyphs) style.glyphs = fixPath(style.glyphs);
-		if (style.sources) {
-			for (const source in style.sources) {
-				if (style.sources[source].url) {
-					style.sources[source].url = fixPath(style.sources[source].url);
-				}
-			}
-		}
-
-		return style;
-	};
+	// Map Initialization and Rendering ---
 
 	onMount(async () => {
 		mushroomData = await fetchData(mushroomsUrl);
 
 		// Map
 
-		const baseUrl =
-			'https://tiles.arcgis.com/tiles/TJH5KDher0W13Kgo/arcgis/rest/services/Ontario_Vector_Topographic_Data_Cache_Service/VectorTileServer/resources/styles';
-		const styleUrl = `${baseUrl}/root.json?f=pjson`;
-		const rawStyle = await (await fetch(styleUrl)).json();
-		const style = makeArcGISPathsAbsolute(rawStyle, baseUrl);
-
-		style.sources.esri['tiles'] = [
-			'https://tiles.arcgis.com/tiles/TJH5KDher0W13Kgo/arcgis/rest/services/Ontario_Vector_Topographic_Data_Cache_Service/VectorTileServer/tile/{z}/{y}/{x}.pbf'
-		];
-
-		style.sources.esri['attribution'] =
-			'<a href="https://geohub.lio.gov.on.ca/maps/mnrf::ontario-vector-topographic-data-cache/about">Ontario Vector Topographic Data Cache</a>';
-
-		// Lot boundaries
-
-		const lotBoundaries: Feature<Polygon> = {
-			type: 'Feature',
-			properties: {
-				name: 'Our Place'
-			},
-			geometry: {
-				type: 'Polygon',
-				coordinates: [
-					[
-						[-79.88035, 43.89948],
-						[-79.88149, 43.89841],
-						[-79.87843, 43.89613],
-						[-79.87626, 43.89452],
-						[-79.87114, 43.89904],
-						[-79.87342, 43.90079],
-						[-79.87692, 43.89754],
-						[-79.88035, 43.89948]
-					]
-				]
-			}
-		};
-		const coordinates = lotBoundaries.geometry.coordinates[0] as LngLatLike[]; // Get the outer ring
-		const bounds = coordinates.reduce(
-			(bounds, coord) => bounds.extend(coord),
-			new maplibregl.LngLatBounds()
-		);
-
-		style.sources['lotBoundaries'] = {
-			type: 'geojson',
-			data: lotBoundaries
-		};
-
-		style.layers.push({
-			id: 'lot-boundary-layer',
-			type: 'line',
-			source: 'lotBoundaries',
-			paint: {
-				'line-color': '#fc8d62',
-				'line-opacity': 1
-			}
-		});
+		const style = await getStyledMap();
+		const bounds = getLotBounds();
 
 		// Mushrooms
 
