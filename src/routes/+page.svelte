@@ -3,7 +3,7 @@
 		Styles,
 		Container,
 		ListGroup,
-		ListGroupItem,
+		ListGroupItem
 	} from '@sveltestrap/sveltestrap';
 </script>
 
@@ -14,6 +14,9 @@
 	<ListGroup>
 		<ListGroupItem tag="a" href="./ourplace" action>Our Place</ListGroupItem>
 		<ListGroupItem tag="a" href="./mushrooms" action>Mushrooms</ListGroupItem>
+		<ListGroupItem tag="a" href="./birdcafe" action
+			>Bird Caf&eacute;</ListGroupItem
+		>
 		<ListGroupItem tag="a" href="./sun-glitters" action
 			>Sun glitters</ListGroupItem
 		>

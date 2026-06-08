@@ -3,7 +3,7 @@ library(dplyr)
 requireNamespace("exiftoolr")
 requireNamespace("jsonlite")
 
-images_path <- "../static/images"
+images_path <- "../../static/images"
 images <- dir(images_path, pattern = "\\.jpeg", full.names = TRUE)
 json_path <- file.path(images_path, "mushrooms.json")
 

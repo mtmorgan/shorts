@@ -1,0 +1,59 @@
+import type { TaxonPhoto } from './types';
+
+interface TaxonResult {
+	results: {
+		id: number;
+		name: string;
+		preferred_common_name: string;
+	}[];
+}
+
+interface TaxaIdResult {
+	results: {
+		default_photo: TaxonPhoto;
+	}[];
+}
+
+// Fetch Taxon ID by Common Name
+const getTaxonId = async (commonName: string): Promise<number> => {
+	const url = `https://api.inaturalist.org/v2/taxa?q=${encodeURIComponent(commonName)}&rank=species&only_id=true`;
+	const response = await fetch(url);
+
+	if (!response.ok) throw new Error('Failed to fetch taxon data');
+
+	const data: TaxonResult = await response.json();
+	if (data.results.length === 0) {
+		throw new Error(`Taxon not found for common name: ${commonName}`);
+	}
+
+	// Assume first result is desired
+	return data.results[0].id;
+};
+
+const cache = new Map<string, TaxonPhoto>();
+
+// Fetch taxa/id/ default photo
+export const getBirdPhotos = async (
+	commonName: string
+): Promise<TaxonPhoto> => {
+	if (cache.has(commonName)) {
+		return cache.get(commonName) as TaxonPhoto;
+	}
+	try {
+		const taxonId = await getTaxonId(commonName);
+
+		// Note: Use 'photos=true' to filter only for observations with images
+		const query = 'default_photo.attribution,default_photo.medium_url';
+		const url = `https://api.inaturalist.org/v2/taxa/${taxonId}?fields=${encodeURIComponent(query)}`;
+		const response = await fetch(url);
+
+		if (!response.ok) throw new Error('Failed to fetch observations');
+
+		const data: TaxaIdResult = await response.json();
+		cache.set(commonName, data.results[0].default_photo);
+		return data.results[0].default_photo;
+	} catch (error) {
+		console.error('Error querying iNaturalist API:', error);
+		throw error;
+	}
+};
