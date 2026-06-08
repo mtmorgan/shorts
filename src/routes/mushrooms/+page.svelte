@@ -10,11 +10,12 @@
 	<h1>Mushrooms!</h1>
 
 	<p>
-		Mushrooms are pretty amazing. Ancient. Weird. Scary. We walked around on a
-		couple of days in the fall and spring, taking pictures of mushrooms. Each
-		dot represents the geographical location where one or more pictures were
-		taken. The color of the dot indicates who took the picture. Overlapping dots
-		(darker color) indicates multiple pictures.
+		Mushrooms are pretty amazing. Ancient. Weird. Scary. We walked around <a
+			href="ourplace">our place</a
+		> on a couple of days in the fall and spring, taking pictures of mushrooms. Each
+		dot represents the geographical location where one or more pictures were taken.
+		The color of the dot indicates who took the picture. Overlapping dots (darker
+		color) indicates multiple pictures.
 	</p>
 
 	<MushroomMap />
