@@ -262,7 +262,7 @@
     "Nuthatch, White-breasted",
     "Sparrow, Song",
     "Swallow, Northern Rough-winged",
-    "Thrush, Swainsons",
+    "Thrush, Swainson's",
     "Vulture",
     "Warbler, Black-throated Green",
     "Warbler, Pine",
@@ -596,7 +596,7 @@
     "Wood-Pewee, Eastern",
     "Yellowthroat, Common"
   ],
-  "2026-05-32": [
+  "2026-06-01": [
     "Blue Jay",
     "Cardinal",
     "Crow, American",
@@ -658,5 +658,19 @@
     "Waterthrush, Northern",
     "Waxwing, Cedar",
     "Yellowthroat, Common"
+  ],
+  "2026-06-06": [
+    "Cardinal",
+    "Crow, American",
+    "Goldfinch",
+    "Hummingbird, Ruby-throated",
+    "Phoebe, Eastern",
+    "Robin",
+    "Sparrow, Song",
+    "Waterthrush, Northern",
+    "Waxwing, Cedar",
+    "Woodpecker, Hairy",
+    "Yellowthroat, Common",
+    "Warbler, Hooded"
   ]
 }

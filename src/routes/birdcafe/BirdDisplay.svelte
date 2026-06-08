@@ -10,6 +10,9 @@
 		animationState: 'visible-right' | 'animating-out' | 'hidden';
 	}
 
+	const DAILY_DURATION_MS = 30000;
+	const PAUSE_DURATION_MS = 5000;
+
 	let { birds }: BirdDisplayProps = $props();
 	let birdCommonName = $state('');
 	let activeImages = $state<DisplayPhoto[]>([]);
@@ -70,12 +73,11 @@
 			// Announce the date and number of observations
 			status.date = date;
 			status.name = `${birds[date].length} observations`;
-			await delay(1000, signal);
+			await delay(PAUSE_DURATION_MS, signal);
 			status.date = '';
 
 			// Run the sequence
-			const TOTAL_DURATION_MS = 10000;
-			const interval = TOTAL_DURATION_MS / list.length;
+			const interval = DAILY_DURATION_MS / list.length;
 
 			for (let i = 0; i < list.length; i++) {
 				if (signal.aborted) return;
@@ -152,14 +154,23 @@
 		isRunning = false;
 	};
 
-	// Clean up the timeouts when the component is unmounted
 	onMount(() => {
-		// runAllDates(0);
+		runAllDates(0);
 		return () => {
-			// FIXME: zero activeImages
+			// Clean up the timeouts when the component is unmounted
+			activeImages = [];
 		};
 	});
 </script>
+
+<p>
+	This animation displays pictures of each bird we've seen over {Object.keys(
+		birds
+	).length} days. Each day takes {DAILY_DURATION_MS / 1000} seconds to display (so
+	about
+	{Math.round(((DAILY_DURATION_MS / 1000) * Object.keys(birds).length) / 60)} minutes
+	for all days); if we saw a lot of birds, they scroll by more quickly!
+</p>
 
 <ButtonGroup>
 	<Button onclick={() => jumpTo(0)}>

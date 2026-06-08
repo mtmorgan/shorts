@@ -13,7 +13,7 @@ function formatDateYYYYMMDD(date: Date): string {
 	}
 	const year = date.getUTCFullYear();
 	const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
-	const day = (date.getUTCDate() + 1).toString().padStart(2, '0'); // Fixed day calculation
+	const day = date.getUTCDate().toString().padStart(2, '0'); // Fixed day calculation
 	return `${year}-${month}-${day}`;
 }
 
@@ -72,7 +72,7 @@ export async function getCafeData(
 			}
 			if (birdsToday.length > 0) {
 				const date = new Date(startDate);
-				date.setDate(startDate.getDate() + (j - 2));
+				date.setDate(startDate.getDate() + (j - 1));
 				const dateString = formatDateYYYYMMDD(date);
 				birds.set(dateString, birdsToday);
 			}
