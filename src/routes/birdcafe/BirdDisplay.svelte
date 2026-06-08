@@ -197,38 +197,38 @@
 			{status.name}
 		</div>
 	{/if}
+</div>
 
-	<div class="animation-boundary">
-		{#each activeImages as img (img.id)}
-			{#if img.animationState !== 'hidden'}
-				<div
-					class="image-wrapper"
-					class:visible-right={img.animationState === 'visible-right'}
-					class:animating-out={img.animationState === 'animating-out'}
-				>
-					{#if img.medium_url}
-						<img
-							src={img.medium_url}
-							alt="Dynamically loaded"
-							class="img-fluid rounded-top"
-						/>
-					{/if}
-					<div class="photo-info p-2 bg-dark text-white">
-						<p class="mb-0" style="font-size: 0.65rem;">
-							{img.name}
-							{img.attribution}
-						</p>
-					</div>
+<div class="animation-boundary">
+	{#each activeImages as img (img.id)}
+		{#if img.animationState !== 'hidden'}
+			<div
+				class="image-wrapper"
+				class:visible-right={img.animationState === 'visible-right'}
+				class:animating-out={img.animationState === 'animating-out'}
+			>
+				{#if img.medium_url}
+					<img
+						src={img.medium_url}
+						alt="Dynamically loaded"
+						class="img-fluid rounded-top"
+					/>
+				{/if}
+				<div class="photo-info p-2 bg-dark text-white">
+					<p class="mb-0" style="font-size: 0.65rem;">
+						{img.name}
+						{img.attribution}
+					</p>
 				</div>
-			{/if}
-		{/each}
-	</div>
-
-	<div class="mb-3 text-end">
-		{#if errorMessage}
-			<div class="invalid-feedback">{errorMessage}</div>
+			</div>
 		{/if}
-	</div>
+	{/each}
+</div>
+
+<div class="mb-3 text-end">
+	{#if errorMessage}
+		<div class="invalid-feedback">{errorMessage}</div>
+	{/if}
 </div>
 
 <style>
@@ -241,7 +241,7 @@
 		position: relative; /* Crucial for absolute positioning inside */
 		overflow: hidden; /* Hides anything that goes outside these bounds */
 		width: 100%; /* Occupy available width */
-		height: 300px; /* Example height, adjust as needed to give space for animation */
+		height: 290px; /* Example height, adjust as needed to give space for animation */
 		border: 1px dashed #ccc; /* Just to visualize the boundary */
 		margin-top: 15px; /* Add some spacing */
 	}
