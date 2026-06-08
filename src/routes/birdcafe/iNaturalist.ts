@@ -1,4 +1,3 @@
-// 1. Define the interfaces for type safety
 import type { TaxonPhoto } from './types';
 
 interface TaxonResult {
@@ -16,7 +15,7 @@ interface TaxaIdResult {
 }
 
 // Fetch Taxon ID by Common Name
-export const getTaxonId = async (commonName: string): Promise<number> => {
+const getTaxonId = async (commonName: string): Promise<number> => {
 	const url = `https://api.inaturalist.org/v2/taxa?q=${encodeURIComponent(commonName)}&rank=species&only_id=true`;
 	const response = await fetch(url);
 
@@ -31,10 +30,15 @@ export const getTaxonId = async (commonName: string): Promise<number> => {
 	return data.results[0].id;
 };
 
+const cache = new Map<string, TaxonPhoto>();
+
 // Fetch taxa/id/ default photo
 export const getBirdPhotos = async (
 	commonName: string
 ): Promise<TaxonPhoto> => {
+	if (cache.has(commonName)) {
+		return cache.get(commonName) as TaxonPhoto;
+	}
 	try {
 		const taxonId = await getTaxonId(commonName);
 
@@ -46,6 +50,7 @@ export const getBirdPhotos = async (
 		if (!response.ok) throw new Error('Failed to fetch observations');
 
 		const data: TaxaIdResult = await response.json();
+		cache.set(commonName, data.results[0].default_photo);
 		return data.results[0].default_photo;
 	} catch (error) {
 		console.error('Error querying iNaturalist API:', error);
