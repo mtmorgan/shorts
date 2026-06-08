@@ -134,6 +134,11 @@
 	};
 
 	const runAllDates = async (startIndex: number) => {
+		if (!navigator.onLine) {
+			errorMessage =
+				'No internet connection detected. Please check your network and try again.';
+			return;
+		}
 		if (isRunning) return;
 
 		resetNavigation();
@@ -155,8 +160,14 @@
 	};
 
 	onMount(() => {
+		const handleOnline = () => {
+			errorMessage = '';
+		};
+		window.addEventListener('online', handleOnline);
 		runAllDates(0);
+
 		return () => {
+			window.removeEventListener('online', handleOnline);
 			// Clean up the timeouts when the component is unmounted
 			activeImages = [];
 		};
