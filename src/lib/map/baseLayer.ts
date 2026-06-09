@@ -52,9 +52,37 @@ const applyEsriSource = (style: any) => {
 	return style;
 };
 
-export const getStyledMap = async () => {
+const applySatelliteLayer = (style: any) => {
+	// Add satellite imagery as a source
+	style.sources['satellite'] = {
+		type: 'raster',
+		tiles: [
+			'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+		],
+		tileSize: 256,
+		attribution:
+			'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+	};
+
+	// Add it as the base layer (at the bottom)
+	style.layers.push({
+		id: 'satellite-layer',
+		type: 'raster',
+		source: 'satellite',
+		paint: {
+			'raster-opacity': 0 // Start hidden so topography is default
+		}
+	});
+
+	return style;
+};
+
+export const getStyledMap = async (withSatellite: boolean = false) => {
 	let style = await getArcGISStyle(ARCGIS_BASE_URL);
 	style = applyEsriSource(style);
-	style = applyLotBoundaryLayer(style);
+	if (withSatellite) {
+		style = applySatelliteLayer(style);
+	}
+	style = applyLotBoundaryLayer(style); // boundary always visible
 	return style;
 };
