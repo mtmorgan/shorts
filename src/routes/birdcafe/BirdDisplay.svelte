@@ -14,20 +14,74 @@
 	const PAUSE_DURATION_MS = 5000;
 
 	let { birds }: BirdDisplayProps = $props();
-	let birdCommonName = $state('');
+	const allDates = Object.keys(birds);
+
+	let status = $state({
+		dateIndex: 0,
+		birdIndex: 0,
+		inIntroduction: true,
+		isRunning: false
+	});
+	let abortController: AbortController | null;
+
+	let statusMessages = $state({
+		date: '',
+		observations: '',
+		progress: '',
+		name: ''
+	});
+	let errorMessage = $state('');
+
 	let activeImages = $state<DisplayPhoto[]>([]);
 	let nextId = 0;
-	let status = $state({ date: '', progress: '', name: '' });
-	let currentIndex = $state(0);
-	let isRunning = $state(false);
-	let abortController: AbortController | null;
-	let errorMessage = $state('');
+
+	// Navigation controls
+
+	const resetBirdsToday = (dateIndex: number) => {
+		abortController?.abort(); // This cancels the loop in progress
+		abortController = null; // Nullify the controller
+		activeImages = [];
+		status = {
+			dateIndex,
+			birdIndex: 0,
+			inIntroduction: true,
+			isRunning: false
+		};
+		statusMessages = { date: '', observations: '', progress: '', name: '' };
+	};
+
+	const jumpTo = (dateIndex: number) => {
+		resetBirdsToday(dateIndex);
+		runDates();
+	};
+
+	const navigate = (direction: 'prev' | 'next') => {
+		const delta = direction === 'next' ? 1 : -1;
+		const dateIndex = Math.max(
+			0,
+			Math.min(status.dateIndex + delta, allDates.length - 1)
+		);
+		resetBirdsToday(dateIndex);
+		runDates();
+	};
+
+	const togglePlay = () => {
+		if (status.isRunning) {
+			status.isRunning = false;
+			abortController?.abort();
+			abortController = null;
+		} else {
+			runDates();
+		}
+	};
+
+	// Bird display
 
 	const delay = (ms: number, signal: AbortSignal) =>
 		new Promise((resolve, reject) => {
 			const timeout = setTimeout(resolve, ms);
 			signal.addEventListener('abort', () => {
-				isRunning = false;
+				status.isRunning = false;
 				clearTimeout(timeout);
 				reject(new DOMException('Aborted', 'AbortError'));
 			});
@@ -40,8 +94,8 @@
 		return `${type} ${species}`;
 	};
 
-	const fetchAndDisplayImage = async (birdCommonName: string) => {
-		if (!isRunning) return;
+	const fetchAndDisplayBird = async (birdCommonName: string) => {
+		if (!status.isRunning) return;
 		errorMessage = '';
 		try {
 			const photoData = await getBirdPhotos(birdCommonName);
@@ -65,98 +119,80 @@
 		}
 	};
 
-	const runSequenceForDate = async (date: string, signal: AbortSignal) => {
-		const list = birds[date];
-		if (!list) return;
+	const doIntroduction = async (
+		today: string,
+		birdsToday: string[],
+		signal: AbortSignal
+	) => {
+		// Announce the date and number of observations
+		statusMessages.date = today;
+		statusMessages.observations = `${birdsToday.length} observations`;
+		await delay(PAUSE_DURATION_MS, signal);
+	};
+
+	const doBird = async (birdsToday: string[], signal: AbortSignal) => {
+		// Start bird display and delay before next
+		const birdName = birdsToday[status.birdIndex];
+		const interval = DAILY_DURATION_MS / birdsToday.length;
+
+		statusMessages.name = formatBirdName(birdName);
+		statusMessages.progress = `${status.birdIndex + 1} / ${birdsToday.length}`;
+		await fetchAndDisplayBird(birdName);
+		await delay(interval, signal);
+	};
+
+	// Iteration over birds and dates
+
+	const runBirdsToday = async (today: string, signal: AbortSignal) => {
+		const birdsToday = birds[today];
+		if (!birdsToday) return;
 
 		try {
-			// Announce the date and number of observations
-			status.date = date;
-			status.name = `${birds[date].length} observations`;
-			await delay(PAUSE_DURATION_MS, signal);
-			status.date = '';
-
-			// Run the sequence
-			const interval = DAILY_DURATION_MS / list.length;
-
-			for (let i = 0; i < list.length; i++) {
-				if (signal.aborted) return;
-
-				birdCommonName = list[i];
-				status.progress = `${i + 1} / ${list.length}`;
-				status.name = formatBirdName(birdCommonName);
-				await fetchAndDisplayImage(birdCommonName);
-				await delay(interval, signal);
+			// Introduce the sequence?
+			if (status.inIntroduction) {
+				await doIntroduction(today, birdsToday, signal);
+				status.inIntroduction = false;
 			}
-			status.progress = '';
-			status.name = '';
+
+			// Continue the sequence
+			while (status.birdIndex < birdsToday.length && status.isRunning) {
+				await doBird(birdsToday, signal);
+				if (signal.aborted) return;
+				status.birdIndex += 1;
+			}
 		} catch (e) {
 			return; // Exit immediately if aborted
 		}
+
+		// Update state for next date
+		status.inIntroduction = true;
+		status.birdIndex = 0;
 	};
 
-	const allDates = Object.keys(birds);
-
-	const resetNavigation = () => {
-		isRunning = false;
-		abortController?.abort(); // This cancels the loop in progress
-		abortController = null; // Nullify the controller
-		activeImages = [];
-		status = { date: '', progress: '', name: '' };
-	};
-
-	const jumpTo = (index: number) => {
-		resetNavigation();
-		currentIndex = index;
-		if (!isRunning) {
-			runAllDates(currentIndex);
-		}
-	};
-
-	const navigate = (direction: 'prev' | 'next') => {
-		resetNavigation();
-		const delta = direction === 'next' ? 1 : -1;
-		currentIndex = Math.max(
-			0,
-			Math.min(currentIndex + delta, allDates.length - 1)
-		);
-		runAllDates(currentIndex);
-	};
-
-	const togglePlay = () => {
-		if (isRunning) {
-			isRunning = false;
-			abortController?.abort();
-			abortController = null;
-		} else {
-			runAllDates(currentIndex);
-		}
-	};
-
-	const runAllDates = async (startIndex: number) => {
+	const runDates = async () => {
 		if (!navigator.onLine) {
 			errorMessage =
 				'No internet connection detected. Please check your network and try again.';
 			return;
 		}
-		if (isRunning) return;
+		if (status.isRunning) return;
 
-		resetNavigation();
 		abortController = new AbortController();
 		const signal = abortController.signal;
-		isRunning = true;
-		currentIndex = startIndex;
+		status.isRunning = true;
 
-		while (currentIndex < allDates.length && isRunning) {
-			await runSequenceForDate(allDates[currentIndex], signal);
+		while (status.dateIndex < allDates.length && status.isRunning) {
+			await runBirdsToday(allDates[status.dateIndex], signal);
 			if (signal.aborted) return;
-			if (isRunning && currentIndex < allDates.length - 1) {
-				currentIndex++;
+			if (status.isRunning && status.dateIndex < allDates.length - 1) {
+				status.dateIndex += 1;
 			} else {
 				break;
 			}
 		}
-		isRunning = false;
+
+		status.dateIndex = 0;
+		status.isRunning = false;
 	};
 
 	onMount(() => {
@@ -164,11 +200,10 @@
 			errorMessage = '';
 		};
 		window.addEventListener('online', handleOnline);
-		runAllDates(0);
+		runDates();
 
 		return () => {
 			window.removeEventListener('online', handleOnline);
-			// Clean up the timeouts when the component is unmounted
 			activeImages = [];
 		};
 	});
@@ -193,7 +228,7 @@
 	</Button>
 
 	<Button color="primary" onclick={togglePlay}>
-		{#if isRunning}
+		{#if status.isRunning}
 			<Icon name="pause" />
 		{:else}
 			<Icon name="play" />
@@ -210,13 +245,19 @@
 </ButtonGroup>
 
 <div class="text-end">
-	{#if status.date || status.progress}
+	{#if status.inIntroduction}
 		<div class="fw-bold">
-			{status.date}
-			{status.progress}
+			{statusMessages.date}
 		</div>
 		<div class="text-muted">
-			{status.name}
+			{statusMessages.observations}
+		</div>
+	{:else}
+		<div class="fw-bold">
+			{statusMessages.progress}
+		</div>
+		<div class="text-muted">
+			{statusMessages.name}
 		</div>
 	{/if}
 </div>
