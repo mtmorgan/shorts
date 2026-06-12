@@ -44,5 +44,4 @@
 		border-top: 5px solid rgb(66, 66, 66);
 		border-bottom: 1px solid rgb(232, 232, 232);
 	}
-
 </style>
