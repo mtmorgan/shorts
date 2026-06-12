@@ -1,10 +1,31 @@
 <script lang="ts">
-	import { Styles, Container } from '@sveltestrap/sveltestrap';
-	import BirdDisplay from './BirdDisplay.svelte';
+	import { onMount } from 'svelte';
+	import {
+		Styles,
+		Container,
+		Button,
+		Icon,
+		ButtonGroup
+	} from '@sveltestrap/sveltestrap';
+	import { AnimationController } from './AnimationController.svelte';
+	import BirdPhotoDisplay from './BirdPhotoDisplay.svelte';
 	import birdData from './birds.json';
 	import type { Birds } from './types';
 
 	let birds: Birds = birdData;
+	const controller = new AnimationController(birds);
+
+	onMount(() => {
+		const handleOnline = () => {
+			controller.errorMessage = '';
+		};
+		window.addEventListener('online', handleOnline);
+		controller.runDates();
+
+		return () => {
+			window.removeEventListener('online', handleOnline);
+		};
+	});
 </script>
 
 <Styles />
@@ -21,7 +42,66 @@
 		Google sheet.
 	</p>
 
-	<BirdDisplay {birds} />
+	<p>
+		This animation displays pictures of each bird we've seen over {controller
+			.allDates.length} days. Each day takes {controller.dailyDurationMs / 1000}
+		seconds to display (so about
+		{Math.round(
+			((controller.dailyDurationMs / 1000) * controller.allDates.length) / 60
+		)} minutes for all days); if we saw a lot of birds, they scroll by more quickly!
+	</p>
+
+	<ButtonGroup class="mb-3">
+		<Button onclick={() => controller.jumpTo(0)}>
+			<Icon name="skip-start" />
+		</Button>
+
+		<Button onclick={() => controller.navigate('prev')}>
+			<Icon name="skip-backward" />
+		</Button>
+
+		<Button color="primary" onclick={() => controller.togglePlay()}>
+			{#if controller.status.isRunning}
+				<Icon name="pause" />
+			{:else}
+				<Icon name="play" />
+			{/if}
+		</Button>
+
+		<Button onclick={() => controller.navigate('next')}>
+			<Icon name="skip-forward" />
+		</Button>
+
+		<Button onclick={() => controller.jumpTo(controller.allDates.length - 1)}>
+			<Icon name="skip-end" />
+		</Button>
+	</ButtonGroup>
+
+	<div class="text-end mb-3">
+		{#if controller.status.inIntroduction}
+			<div class="fw-bold">
+				{controller.statusMessages.date}
+			</div>
+			<div class="text-muted">
+				{controller.statusMessages.observations}
+			</div>
+		{:else}
+			<div class="fw-bold">
+				{controller.statusMessages.progress}
+			</div>
+			<div class="text-muted">
+				{controller.statusMessages.name}
+			</div>
+		{/if}
+	</div>
+
+	<BirdPhotoDisplay {controller} />
+
+	<div class="mb-3 text-end">
+		{#if controller.errorMessage}
+			<div class="invalid-feedback">{controller.errorMessage}</div>
+		{/if}
+	</div>
 
 	<h1>Implementation Notes</h1>
 
@@ -51,3 +131,9 @@
 		<a href="https://api.inaturalist.org/v2/docs/">API</a>.
 	</p>
 </Container>
+
+<style>
+	.invalid-feedback {
+		display: block;
+	}
+</style>
