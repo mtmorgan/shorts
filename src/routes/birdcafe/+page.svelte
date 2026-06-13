@@ -9,6 +9,7 @@
 	} from '@sveltestrap/sveltestrap';
 	import { AnimationController } from './AnimationController.svelte';
 	import BirdPhotoDisplay from './BirdPhotoDisplay.svelte';
+	import PunchCard from './PunchCard.svelte';
 	import birdData from './birds.json';
 	import type { Birds } from './types';
 
@@ -20,7 +21,6 @@
 			controller.errorMessage = '';
 		};
 		window.addEventListener('online', handleOnline);
-		controller.runDates();
 
 		return () => {
 			window.removeEventListener('online', handleOnline);
@@ -96,6 +96,8 @@
 	</div>
 
 	<BirdPhotoDisplay {controller} />
+
+	<PunchCard {controller} />
 
 	<div class="mb-3 text-end">
 		{#if controller.errorMessage}
