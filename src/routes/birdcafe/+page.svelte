@@ -8,7 +8,7 @@
 		ButtonGroup
 	} from '@sveltestrap/sveltestrap';
 	import { AnimationController } from './AnimationController.svelte';
-	import BirdPhotoDisplay from './BirdPhotoDisplay.svelte';
+	import Cafe from './Cafe.svelte';
 	import PunchCard from './PunchCard.svelte';
 	import birdData from './birds.json';
 	import type { Birds } from './types';
@@ -95,7 +95,7 @@
 		{/if}
 	</div>
 
-	<BirdPhotoDisplay {controller} />
+	<Cafe {controller} />
 
 	<PunchCard {controller} />
 

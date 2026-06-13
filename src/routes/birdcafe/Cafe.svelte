@@ -14,12 +14,6 @@
 	let activeImages = $state<DisplayPhoto[]>([]);
 	let nextId = 0;
 
-	const formatBirdName = (name: string): string => {
-		if (!name.includes(',')) return name;
-		const [species, type] = name.split(',').map((s) => s.trim());
-		return `${type} ${species}`;
-	};
-
 	const fetchAndDisplayBird = async (birdCommonName: string, runId: number) => {
 		if (!controller.status.isRunning || runId !== controller.getActiveRunId())
 			return;
@@ -31,7 +25,7 @@
 			const newImage: DisplayPhoto = $state({
 				...photoData,
 				id: nextId++,
-				name: formatBirdName(birdCommonName),
+				name: birdCommonName,
 				animationState: 'visible-right'
 			});
 			activeImages.push(newImage);

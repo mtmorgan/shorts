@@ -119,12 +119,6 @@ export class AnimationController {
 		});
 	}
 
-	private formatBirdName(name: string): string {
-		if (!name.includes(',')) return name;
-		const [species, type] = name.split(',').map((s) => s.trim());
-		return `${type} ${species}`;
-	}
-
 	private async doIntroduction(
 		today: string,
 		birdsToday: string[],
@@ -139,7 +133,7 @@ export class AnimationController {
 		const birdName = birdsToday[this.status.birdIndex];
 		const interval = this.dailyDurationMs / birdsToday.length;
 
-		this.statusMessages.name = this.formatBirdName(birdName);
+		this.statusMessages.name = birdName;
 		this.statusMessages.progress = `${this.status.birdIndex + 1} / ${birdsToday.length}`;
 
 		// Trigger the current bird reactive state change
