@@ -5,6 +5,7 @@
 
 	let { controller }: { controller: AnimationController } = $props();
 	let chartContainer: HTMLDivElement | undefined = $state();
+	let chartWidth = $state(0);
 
 	const today = $derived(
 		Object.keys(controller.birds)[controller.status.dateIndex]
@@ -17,19 +18,28 @@
 		const currentBirds = filteredBirds;
 		const bird = controller.currentBird?.name;
 		if (chartContainer && currentBirds && currentToday) {
-			drawPunchCard(chartContainer, currentBirds, currentToday, bird);
+			drawPunchCard(
+				chartContainer,
+				currentBirds,
+				currentToday,
+				bird,
+				chartWidth
+			);
 		}
 	});
 </script>
 
-<div bind:this={chartContainer} class="punchcard-wrapper"></div>
+<div
+	bind:this={chartContainer}
+	class="punchcard-wrapper"
+	bind:clientWidth={chartWidth}
+></div>
 
 <style>
 	.punchcard-wrapper {
 		width: 100%;
 		overflow-x: auto;
 		background: #ffffff;
-		padding: 1rem;
 		border: 1px dashed #ccc; /* Just to visualize the boundary */
 		margin-top: 15px; /* Add some spacing */
 	}
