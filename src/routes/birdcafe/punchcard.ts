@@ -149,8 +149,12 @@ export const drawPunchCard = (
 		.attr('dx', '-0.8em')
 		.attr('dy', '0.15em');
 
-	// Draw Y axis container (fixed)
-	svgElement.append('g').call(yAxis);
+	// Draw Y axis container; display possibly obscured species name on hover
+	const yAxisGroup = svgElement.append('g').call(yAxis);
+	yAxisGroup
+		.selectAll('.tick')
+		.append('title')
+		.text((d) => `${d}`);
 
 	// Retrieve any saved zoom/pan transform for this element
 	const currentTransform = zoomStateMap.get(element) || d3.zoomIdentity;
