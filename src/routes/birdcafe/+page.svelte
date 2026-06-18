@@ -14,7 +14,13 @@
 	import type { Birds } from './types';
 
 	let birds: Birds = birdData;
-	const controller = new AnimationController(birds);
+	const dailyDurationMs = 70000;
+	const pauseDurationMs = 6000;
+	const controller = new AnimationController(
+		birds,
+		dailyDurationMs,
+		pauseDurationMs
+	);
 
 	onMount(() => {
 		const handleOnline = () => {
@@ -34,21 +40,22 @@
 	<h1>Bird Caf&eacute;</h1>
 
 	<p>
-		Most mornings we head from the hill cabin to the pond cabin (see <a
-			href="ourplace">our place</a
-		>) for a coffee. We sit on the deck and turn on the amazing
+		Most mornings in the spring of 2026 we went from the Hill to the Pond cabin
+		(at <a href="ourplace">our place</a>) for a coffee. We sat on the deck and
+		turned on the amazing
 		<a href="https://merlin.allaboutbirds.org/">Merlin</a> app, listening to the
-		birds for a half hour or so. We then record the birds we heard that day in a
-		Google sheet.
+		birds for a half hour or so. We'd note the birds in a Google sheet.
 	</p>
 
 	<p>
-		This animation displays pictures of each bird we've seen over {controller
-			.allDates.length} days. Each day takes {controller.dailyDurationMs / 1000}
-		seconds to display (so about
+		Here are the birds for {controller.allDates.length} days (from {controller
+			.allDates[0]} to {controller.allDates[controller.allDates.length - 1]}).
+		Each day takes
+		{controller.dailyDurationMs / 1000}
+		seconds (so a meditative
 		{Math.round(
 			((controller.dailyDurationMs / 1000) * controller.allDates.length) / 60
-		)} minutes for all days); if we saw a lot of birds, they scroll by more quickly!
+		)} minutes); days with lots of birds scroll by quickly!
 	</p>
 
 	<ButtonGroup class="mb-3">
@@ -109,22 +116,26 @@
 
 	<p>
 		<a href="https://merlin.allaboutbirds.org/">Merlin</a> really engaged us with
-		the birds at our place. Our recordings weren't very systematic. We'd get to the
-		pond cabin some time between 9 and noon. We didn't record the weather or other
-		factors likely to influence birds we heard. We relied almost entirely on Merlin
-		for bird identification, though as the season progressed we became better at
-		identifying our favorite birds both by song and sight. We'd add birds that we
-		saw but didn't hear (e.g., vultures) to our list.
+		the birds at our place. We'd get to the Pond cabin some time between 9 and noon.
+		We didn't record the weather or other factors. We relied on Merlin for bird identification,
+		though as the season progressed we were able to identify our favorite birds both
+		by song and sight. We added birds that we saw but didn't hear (e.g., vultures)
+		to our list.
 	</p>
 
 	<p>
-		This page uses the JavaScript <a
-			href="https://svelte.dev/docs/kit/introduction">SvelteKit</a
+		This page uses <a href="https://svelte.dev/docs/kit/introduction"
+			>SvelteKit</a
 		>
-		framework and <a href="https://sveltestrap.js.org/">Sveltestrap</a> for front-end
-		styling. I used JavaScript in a pre-processing step to access the Google sheet
-		and transformed the observational data for use as a static JSON file in the animation.
-		Animations use CSS. Google Gemini (free tier) provided a lot of help.
+		and <a href="https://sveltestrap.js.org/">Sveltestrap</a> for front-end
+		styling. The 'punchcard' plots use
+		<a href="https://d3js.org/">D3</a>. A JavaScript pre-processing step
+		accesses the Google sheet to transform the observational data to a JSON
+		file.
+	</p>
+	<p>
+		<a href="https://zed.dev/">Zed</a> and Google Gemini (free tier) provided a lot
+		of help.
 	</p>
 
 	<p>

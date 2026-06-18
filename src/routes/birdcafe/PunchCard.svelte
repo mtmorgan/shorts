@@ -35,6 +35,11 @@
 	bind:clientWidth={chartWidth}
 ></div>
 
+<p>
+	Pan left or right if not all dates show. Hover over a y-axis label or 'punch'
+	to see the species name and date.
+</p>
+
 <style>
 	.punchcard-wrapper {
 		width: 100%;
