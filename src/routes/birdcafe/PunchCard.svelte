@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { AnimationController } from './AnimationController.svelte';
-	import { filterBirdsToday, drawPunchCard } from './punchcard';
+	import { punchPointsToday, drawPunchCard } from './punchcard';
 	import type { Birds } from './types';
 
 	let { controller }: { controller: AnimationController } = $props();
@@ -10,20 +10,20 @@
 	const today = $derived(
 		Object.keys(controller.birds)[controller.status.dateIndex]
 	);
-	const filteredBirds = $derived(filterBirdsToday(controller.birds, today));
+	const punchPoints = $derived(punchPointsToday(controller.birds, today));
 
 	$effect(() => {
-		// Access currentBird to establish a reactive dependency
+		// Access today and punchPoints to establish a reactive dependency
 		const currentToday = today;
-		const currentBirds = filteredBirds;
-		const bird = controller.currentBird?.name;
-		if (chartContainer && currentBirds && currentToday) {
+		const currentPunchPoints = punchPoints;
+		if (chartContainer && currentToday && currentPunchPoints) {
 			drawPunchCard(
 				chartContainer,
-				currentBirds,
-				currentToday,
-				bird,
-				chartWidth
+				chartWidth,
+				punchPoints,
+				today,
+				controller.birds[today],
+				controller.currentBird?.name
 			);
 		}
 	});

@@ -1,10 +1,9 @@
 import * as d3 from 'd3';
 import type { Birds } from './types';
 
-const COLOR_NORMAL = '#b0bec5';
-const COLOR_HIGHLIGHT = '#0d47a1';
+const TIME_FORMAT = '%Y-%m-%d';
 
-interface PunchPoint {
+export interface PunchPoint {
 	date: Date;
 	species: string;
 }
@@ -12,22 +11,21 @@ interface PunchPoint {
 // Module-level map to store the zoom transform of each chart element across redraws
 const zoomStateMap = new Map<HTMLElement, any>();
 
-export const filterBirdsToday = (birds: Birds, today: string) => {
-	const birdsToday = new Set<string>(birds[today]);
+export const punchPointsToday = (birds: Birds, today: string): PunchPoint[] => {
+	const birdsToday = new Set<string>(birds[today] || []);
+	const timeParse = d3.timeParse(TIME_FORMAT);
+	const points: PunchPoint[] = [];
 
-	let filteredBirds: Birds = {};
-	for (const date of Object.keys(birds)) {
-		let filteredBirdsToday: string[] = [];
-		for (const bird of birds[date]) {
-			if (birdsToday.has(bird)) {
-				filteredBirdsToday.push(bird);
+	for (const [dateString, speciesArray] of Object.entries(birds)) {
+		const date = timeParse(dateString);
+		if (!date) continue;
+		for (const species of speciesArray) {
+			if (birdsToday.has(species)) {
+				points.push({ date, species });
 			}
 		}
-		if (filteredBirdsToday.length) {
-			filteredBirds[date] = filteredBirdsToday;
-		}
 	}
-	return filteredBirds;
+	return points;
 };
 
 const daysInRange = (dates: Date[]) => {
@@ -37,32 +35,29 @@ const daysInRange = (dates: Date[]) => {
 
 export const drawPunchCard = (
 	element: HTMLElement,
-	birds: Birds,
+	width: number,
+	points: PunchPoint[],
 	today: string,
-	bird: string | undefined,
-	width: number
+	todayBirds: string[],
+	bird: string | undefined
 ): void => {
-	const parseTime = d3.timeParse('%Y-%m-%d');
-	const points: PunchPoint[] = [];
-	const speciesSet = new Set();
+	// Dots constants
+	const RADIUS_RANGE = { MIN: 3, MAX: 8 };
+	const COLOR_NORMAL = '#b0bec5';
+	const COLOR_HIGHLIGHT = '#0d47a1';
 
-	const todayTime = parseTime(today)?.getTime();
-
-	Object.entries(birds).forEach(([dStr, sList]) => {
-		const cleanD = parseTime(dStr);
-		if (!cleanD) return;
-		sList.forEach((sName) => {
-			points.push({ date: cleanD, species: sName });
-			speciesSet.add(sName);
-		});
-	});
-
-	const allDates = points.map((p) => p.date);
-	const xRangeMax = 12 * daysInRange(allDates); // 6 px circle radius
+	const todayTime = d3.timeParse(TIME_FORMAT)(today)?.getTime();
+	const dates = points.map((p) => p.date);
+	const days = daysInRange(dates);
 
 	const m = { top: 20, right: 0, bottom: 50, left: 120 };
-	const chartW = Math.min(width - (m.left + m.right), xRangeMax);
+	const chartW = Math.min(
+		width - (m.left + m.right),
+		2 * RADIUS_RANGE.MAX * days
+	);
 	const chartH = 300;
+	const radius = Math.max(RADIUS_RANGE.MIN, chartW / days / 2);
+	const xRangeMax = 2 * radius * days;
 
 	// Clear previous chart content
 	d3.select(element).html('');
@@ -82,7 +77,7 @@ export const drawPunchCard = (
 	// Axes
 	const xScale = d3
 		.scaleTime()
-		.domain(d3.extent(allDates) as [Date, Date])
+		.domain(d3.extent(dates) as [Date, Date])
 		.range([0, xRangeMax])
 		.nice();
 	const xAxis = d3
@@ -90,10 +85,9 @@ export const drawPunchCard = (
 		.ticks(d3.timeWeek.every(1))
 		.tickFormat(d3.timeFormat('%b %d') as any);
 
-	const speciesDomain = Array.from(speciesSet).sort() as string[];
 	const yScale = d3
 		.scalePoint<string>()
-		.domain(speciesDomain)
+		.domain(todayBirds.slice().sort())
 		.range([0, chartH])
 		.padding(0.5);
 	const yAxis = d3.axisLeft(yScale);
@@ -129,7 +123,7 @@ export const drawPunchCard = (
 		.attr('class', 'dot')
 		.attr('cx', (d) => xScale(d.date))
 		.attr('cy', (d) => yScale(d.species) ?? 0)
-		.attr('r', 6)
+		.attr('r', radius)
 		.attr('fill', (d) => {
 			const test = todayTime === d.date.getTime() || bird === d.species;
 			return test ? COLOR_HIGHLIGHT : COLOR_NORMAL;
@@ -139,7 +133,7 @@ export const drawPunchCard = (
 	// Append titles to individual dots for tooltip information
 	dots
 		.append('title')
-		.text((d) => d.species + ' on ' + d3.timeFormat('%Y-%m-%d')(d.date));
+		.text((d) => d.species + ' on ' + d3.timeFormat(TIME_FORMAT)(d.date));
 
 	// Draw X axis container
 	const gX = svgElement
