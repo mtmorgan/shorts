@@ -1,17 +1,28 @@
 import * as d3 from 'd3';
-import type { Birds } from './types';
-
-const TIME_FORMAT = '%Y-%m-%d';
-
-export interface PunchPoint {
-	date: Date;
-	species: string;
-}
+import type { Birds, BarCount, PunchPoint } from './types';
+import {
+	TIME_FORMAT,
+	RADIUS_RANGE,
+	COLOR_NORMAL,
+	COLOR_HIGHLIGHT,
+	MARGIN
+} from './constants';
 
 // Module-level map to store the zoom transform of each chart element across redraws
 const zoomStateMap = new Map<HTMLElement, any>();
 
-export const punchPointsToday = (birds: Birds, today: string): PunchPoint[] => {
+export const countBirdsPerDay = (birds: Birds): BarCount[] => {
+	const counts: BarCount[] = [];
+	const timeParse = d3.timeParse(TIME_FORMAT);
+	for (const [dateString, speciesArray] of Object.entries(birds)) {
+		const date = timeParse(dateString);
+		if (!date) continue;
+		counts.push({ date, count: speciesArray.length });
+	}
+	return counts;
+};
+
+export const punchBirdsToday = (birds: Birds, today: string): PunchPoint[] => {
 	const birdsToday = new Set<string>(birds[today] || []);
 	const timeParse = d3.timeParse(TIME_FORMAT);
 	const points: PunchPoint[] = [];
@@ -28,51 +39,58 @@ export const punchPointsToday = (birds: Birds, today: string): PunchPoint[] => {
 	return points;
 };
 
-const daysInRange = (dates: Date[]) => {
+// Place today's bird last, so it overplots other birds
+const punchBirdsReorder = (
+	points: PunchPoint[],
+	bird: string | undefined
+): PunchPoint[] => {
+	const matches: PunchPoint[] = [];
+	const nonMatches: PunchPoint[] = [];
+
+	for (const point of points) {
+		if (point.species === bird) {
+			matches.push(point);
+		} else {
+			nonMatches.push(point);
+		}
+	}
+	return [...nonMatches, ...matches];
+};
+
+export const daysInRange = (dates: Date[]): number => {
 	const [earliest, latest] = d3.extent(dates);
 	return earliest && latest ? d3.timeDay.count(earliest, latest) : 0;
 };
 
 export const drawPunchCard = (
-	element: HTMLElement,
-	width: number,
+	chartContainer: HTMLElement,
+	chartWidth: number,
+	counts: BarCount[],
 	points: PunchPoint[],
 	today: string,
-	todayBirds: string[],
+	birds: Birds,
 	bird: string | undefined
 ): void => {
-	// Dots constants
-	const RADIUS_RANGE = { MIN: 3, MAX: 8 };
-	const COLOR_NORMAL = '#b0bec5';
-	const COLOR_HIGHLIGHT = '#0d47a1';
-
+	const todayBirds = birds[today];
 	const todayTime = d3.timeParse(TIME_FORMAT)(today)?.getTime();
 	const dates = points.map((p) => p.date);
 	const days = daysInRange(dates);
 
-	const m = { top: 20, right: 0, bottom: 50, left: 120 };
-	const chartW = Math.min(
-		width - (m.left + m.right),
+	const width = Math.min(
+		chartWidth - (MARGIN.left + MARGIN.right),
 		2 * RADIUS_RANGE.MAX * days
 	);
-	const chartH = 300;
-	const radius = Math.max(RADIUS_RANGE.MIN, chartW / days / 2);
-	const xRangeMax = 2 * radius * days;
+	const barsHeight = 50;
+	const gapHeight = 10;
+	const dotsHeight = 300;
+	const height = barsHeight + gapHeight + dotsHeight;
+
+	const barWidth = 4;
+	const dotRadius = Math.max(RADIUS_RANGE.MIN, chartWidth / days) / 2;
+	const xRangeMax = 2 * dotRadius * days;
 
 	// Clear previous chart content
-	d3.select(element).html('');
-
-	// Create root SVG
-	const svg = d3
-		.select(element)
-		.append('svg')
-		.attr('width', chartW + m.left + m.right)
-		.attr('height', chartH + m.top + m.bottom);
-
-	// Create inner chart group translated by margins
-	const svgElement = svg
-		.append('g')
-		.attr('transform', 'translate(' + m.left + ',' + m.top + ')');
+	d3.select(chartContainer).html('');
 
 	// Axes
 	const xScale = d3
@@ -85,45 +103,81 @@ export const drawPunchCard = (
 		.ticks(d3.timeWeek.every(1))
 		.tickFormat(d3.timeFormat('%b %d') as any);
 
-	const yScale = d3
+	const yScaleDots = d3
 		.scalePoint<string>()
 		.domain(todayBirds.slice().sort())
-		.range([0, chartH])
+		.range([barsHeight + gapHeight, height])
 		.padding(0.5);
-	const yAxis = d3.axisLeft(yScale);
+	const yAxisDots = d3.axisLeft(yScaleDots);
 
-	// Define clipping path for dots so they stay within chart boundaries during pan
+	const yScaleBars = d3
+		.scaleLinear()
+		.domain([0, Math.max(d3.max(counts, (d) => d.count) ?? 0, 30)])
+		.range([barsHeight, 0])
+		.nice();
+	const yAxisBars = d3.axisLeft(yScaleBars).ticks(3);
+
+	// Create root SVG
+	const svg = d3
+		.select(chartContainer)
+		.append('svg')
+		.attr('width', width + MARGIN.left + MARGIN.right)
+		.attr('height', height + MARGIN.top + MARGIN.bottom);
+
+	// Create inner chart group translated by margins
+	const svgElement = svg
+		.append('g')
+		.attr('transform', `translate(${MARGIN.left}, ${MARGIN.top})`);
+
+	// Define clipping path for dots and bars so they stay within chart boundaries during pan
 	svgElement
 		.append('defs')
 		.append('clipPath')
 		.attr('id', 'chart-clip')
 		.append('rect')
-		.attr('width', chartW)
-		.attr('height', chartH);
+		.attr('width', width)
+		.attr('height', height);
 
 	// Transparent background rectangle to capture zoom and drag events in empty space
 	svgElement
 		.append('rect')
-		.attr('width', chartW)
-		.attr('height', chartH)
+		.attr('width', width)
+		.attr('height', height)
 		.attr('fill', 'none')
 		.attr('pointer-events', 'all');
 
-	// Group to hold the dots, clipped to the chart bounds
-	const dotsGroup = svgElement
+	// Group to hold the dots and bars, clipped to the chart bounds
+	const chartContentGroup = svgElement
 		.append('g')
 		.attr('clip-path', 'url(#chart-clip)');
 
+	// Draw bars inside the clipped group
+	const bars = chartContentGroup
+		.selectAll('.bar')
+		.data(counts)
+		.enter()
+		.append('rect')
+		.attr('class', 'bar')
+		.attr('x', (d) => xScale(d.date) - barWidth / 2)
+		.attr('y', (d) => yScaleBars(d.count))
+		.attr('width', barWidth)
+		.attr('height', (d) => barsHeight - yScaleBars(d.count))
+		.attr('fill', (d) => {
+			const test = todayTime === d.date.getTime();
+			return test ? COLOR_HIGHLIGHT : COLOR_NORMAL;
+		})
+		.attr('opacity', 0.8);
+
 	// Draw dots inside the clipped group
-	const dots = dotsGroup
+	const dots = chartContentGroup
 		.selectAll('.dot')
-		.data(points)
+		.data(punchBirdsReorder(points, bird))
 		.enter()
 		.append('circle')
 		.attr('class', 'dot')
 		.attr('cx', (d) => xScale(d.date))
-		.attr('cy', (d) => yScale(d.species) ?? 0)
-		.attr('r', radius)
+		.attr('cy', (d) => yScaleDots(d.species) ?? 0)
+		.attr('r', dotRadius)
 		.attr('fill', (d) => {
 			const test = todayTime === d.date.getTime() || bird === d.species;
 			return test ? COLOR_HIGHLIGHT : COLOR_NORMAL;
@@ -136,28 +190,40 @@ export const drawPunchCard = (
 		.text((d) => d.species + ' on ' + d3.timeFormat(TIME_FORMAT)(d.date));
 
 	// Draw X axis container
-	const gX = svgElement
+	const svgXAxisElement = svgElement
 		.append('g')
 		.attr('class', 'x-axis')
-		.attr('transform', 'translate(0,' + chartH + ')')
+		.attr('transform', 'translate(0,' + height + ')')
 		.call(xAxis);
 
 	// Style rotated text labels on the X axis
-	gX.selectAll('text')
+	svgXAxisElement
+		.selectAll('text')
 		.attr('transform', 'rotate(-45)')
 		.style('text-anchor', 'end')
 		.attr('dx', '-0.8em')
 		.attr('dy', '0.15em');
 
-	// Draw Y axis container; display possibly obscured species name on hover
-	const yAxisGroup = svgElement.append('g').call(yAxis);
+	// Draw Y axis containers
+	svgElement
+		.append('g')
+		.call(yAxisBars)
+		.append('text')
+		.attr('transform', 'rotate(-90)')
+		.attr('y', -MARGIN.left + 90)
+		.attr('x', -barsHeight / 2)
+		.attr('text-anchor', 'middle')
+		.attr('fill', 'currentColor')
+		.text('Species');
+
+	const yAxisGroup = svgElement.append('g').call(yAxisDots);
 	yAxisGroup
 		.selectAll('.tick')
 		.append('title')
 		.text((d) => `${d}`);
 
 	// Retrieve any saved zoom/pan transform for this element
-	const currentTransform = zoomStateMap.get(element) || d3.zoomIdentity;
+	const currentTransform = zoomStateMap.get(chartContainer) || d3.zoomIdentity;
 
 	// Set up zoom and pan behavior
 	const zoom = d3
@@ -165,29 +231,31 @@ export const drawPunchCard = (
 		.scaleExtent([1, 1]) // No zooming
 		.extent([
 			[0, 0],
-			[chartW - (m.left + m.right), chartH]
+			[width - (MARGIN.left + MARGIN.right), height]
 		])
 		.translateExtent([
 			// Pan between 0 and maximum x axis range (pixels)
 			[0, -Infinity],
-			[xRangeMax - (m.left + m.right), Infinity]
+			[xRangeMax - (MARGIN.left + MARGIN.right), Infinity]
 		])
 		.on('zoom', (event) => {
 			const transform = event.transform;
-			zoomStateMap.set(element, transform);
+			zoomStateMap.set(chartContainer, transform);
 
 			const newXScale = transform.rescaleX(xScale);
 
 			// Update x-axis with the new scale
-			gX.call(xAxis.scale(newXScale))
+			svgXAxisElement
+				.call(xAxis.scale(newXScale))
 				.selectAll('text')
 				.attr('transform', 'rotate(-45)')
 				.style('text-anchor', 'end')
 				.attr('dx', '-0.8em')
 				.attr('dy', '0.15em');
 
-			// Update dots positions
+			// Update dots and bars positions
 			dots.attr('cx', (d) => newXScale(d.date));
+			bars.attr('x', (d) => newXScale(d.date) - barWidth / 2);
 		});
 
 	// Attach zoom behavior to the SVG

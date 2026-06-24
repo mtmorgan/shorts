@@ -22,6 +22,16 @@
 		pauseDurationMs
 	);
 
+	const countBirds = (): number => {
+		const taxa = new Set<string>();
+		Object.values(birds).forEach((observations) => {
+			observations.forEach((observation) => {
+				if (!taxa.has(observation)) taxa.add(observation);
+			});
+		});
+		return taxa.size;
+	};
+
 	onMount(() => {
 		const handleOnline = () => {
 			controller.errorMessage = '';
@@ -48,9 +58,10 @@
 	</p>
 
 	<p>
-		Here are the birds for {controller.allDates.length} days (from {controller
-			.allDates[0]} to {controller.allDates[controller.allDates.length - 1]}).
-		Each day takes
+		Merlin heard {countBirds()} birds over {controller.allDates.length} days (from
+		{controller.allDates[0]} to {controller.allDates[
+			controller.allDates.length - 1
+		]}). Each day plays back in
 		{controller.dailyDurationMs / 1000}
 		seconds (so a meditative
 		{Math.round(
@@ -84,6 +95,12 @@
 		</Button>
 	</ButtonGroup>
 
+	<div class="mb-3 text-end">
+		{#if controller.errorMessage}
+			<div class="invalid-feedback">{controller.errorMessage}</div>
+		{/if}
+	</div>
+
 	<div class="text-end mb-3">
 		{#if controller.status.inIntroduction}
 			<div class="fw-bold">
@@ -105,12 +122,6 @@
 	<Cafe {controller} />
 
 	<PunchCard {controller} />
-
-	<div class="mb-3 text-end">
-		{#if controller.errorMessage}
-			<div class="invalid-feedback">{controller.errorMessage}</div>
-		{/if}
-	</div>
 
 	<h1>Implementation Notes</h1>
 
