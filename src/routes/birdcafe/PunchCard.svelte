@@ -39,6 +39,13 @@
 	});
 </script>
 
+<h2>Punch Cards</h2>
+
+<p>
+	The bar chart at the top of the figure shows how many species were observed on
+	each day. The punch card summarizes birds showing up on the day currently in
+	the cafe, and the other days when the same species appeared.
+</p>
 <div
 	bind:this={chartContainer}
 	class="punchcard-wrapper"

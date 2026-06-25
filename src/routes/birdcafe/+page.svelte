@@ -10,6 +10,7 @@
 	import { AnimationController } from './AnimationController.svelte';
 	import Cafe from './Cafe.svelte';
 	import PunchCard from './PunchCard.svelte';
+	import Abundance from './Abundance.svelte';
 	import birdData from './birds.json';
 	import type { Birds } from './types';
 
@@ -101,8 +102,6 @@
 		{/if}
 	</div>
 
-	<PunchCard {controller} />
-
 	<div class="text-end mb-3">
 		{#if controller.status.inIntroduction}
 			<div class="fw-bold">
@@ -123,6 +122,10 @@
 
 	<Cafe {controller} />
 
+	<PunchCard {controller} />
+
+	<Abundance {controller} />
+
 	<h1>Implementation Notes</h1>
 
 	<p>
@@ -139,7 +142,7 @@
 			>SvelteKit</a
 		>
 		and <a href="https://sveltestrap.js.org/">Sveltestrap</a> for front-end
-		styling. The 'punchcard' plots use
+		styling. The 'punchcard' and other plots use
 		<a href="https://d3js.org/">D3</a>. A JavaScript pre-processing step
 		accesses the Google sheet to transform the observational data to a JSON
 		file.

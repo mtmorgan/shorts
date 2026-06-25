@@ -58,6 +58,10 @@
 	});
 </script>
 
+<h2>At the Caf&eacute;</h2>
+
+<p>Start the animation to view birds visiting the cafe.</p>
+
 <div class="animation-boundary">
 	{#each activeImages as img (img.id)}
 		{#if img.animationState !== 'hidden'}
