@@ -3,6 +3,9 @@ import * as path from 'path';
 import { google, sheets_v4 } from 'googleapis';
 import { fileURLToPath } from 'url';
 
+const SPREADSHEET_ID = '1Yq0bFkUxQCs7xic4lfLfZ_WsZqObXPmQu_Q-htU6pJU'; // Replace with your actual spreadsheet ID
+const SHEET_RANGE = 'Cafe!A5:GA113'; // Replace with your desired sheet name and range
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -94,9 +97,6 @@ export async function getCafeData(
 // --- Example Usage ---
 
 async function main() {
-	const SPREADSHEET_ID = '1Yq0bFkUxQCs7xic4lfLfZ_WsZqObXPmQu_Q-htU6pJU'; // Replace with your actual spreadsheet ID
-	const SHEET_RANGE = 'Cafe!A5:GA107'; // Replace with your desired sheet name and range
-
 	try {
 		const jsonData = await getCafeData(SPREADSHEET_ID, SHEET_RANGE);
 		const jsonString = JSON.stringify(jsonData, null, 2);

@@ -101,6 +101,8 @@
 		{/if}
 	</div>
 
+	<PunchCard {controller} />
+
 	<div class="text-end mb-3">
 		{#if controller.status.inIntroduction}
 			<div class="fw-bold">
@@ -120,8 +122,6 @@
 	</div>
 
 	<Cafe {controller} />
-
-	<PunchCard {controller} />
 
 	<h1>Implementation Notes</h1>
 
