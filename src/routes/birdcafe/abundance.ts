@@ -1,6 +1,6 @@
 import * as d3 from 'd3';
-import type { Birds } from './types';
 import { COLOR_HIGHLIGHT, COLOR_NORMAL, RADIUS_RANGE } from './constants';
+import type { BirdObservation } from './types';
 
 export interface Abundance {
 	species: number;
@@ -13,17 +13,10 @@ interface RegressionResult {
 	predict: (x: number) => number; // Returns raw Y for raw X
 }
 
-const tallyAbundance = (birds: Birds): Abundance[] => {
-	const counts: Record<string, number> = {};
-	for (const observations of Object.values(birds)) {
-		for (const bird of observations) {
-			counts[bird] = (counts[bird] || 0) + 1;
-		}
-	}
-
+const speciesOccurrence = (observations: BirdObservation[]): Abundance[] => {
 	const tally: Record<number, number> = {};
-	for (const count of Object.values(counts)) {
-		tally[count] = (tally[count] || 0) + 1;
+	for (const observation of observations) {
+		tally[observation.count] = (tally[observation.count] || 0) + 1;
 	}
 
 	const abundance: Abundance[] = Object.entries(tally)
@@ -68,10 +61,10 @@ const calculateLogLogRegression = (data: Abundance[]): RegressionResult => {
 export const drawAbundance = (
 	chartContainer: HTMLElement,
 	chartWidth: number,
-	birds: Birds
+	counts: BirdObservation[]
 ): void => {
 	// Calculate abundances
-	const abundance = tallyAbundance(birds);
+	const abundance = speciesOccurrence(counts);
 
 	// Plot
 	const margin = { top: 40, right: 40, bottom: 60, left: 60 };

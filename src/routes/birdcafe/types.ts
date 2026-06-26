@@ -21,3 +21,8 @@ export interface PunchPoint {
 	date: Date;
 	species: string;
 }
+
+export interface BirdObservation {
+	species: string;
+	count: number;
+}
