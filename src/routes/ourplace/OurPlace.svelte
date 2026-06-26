@@ -4,7 +4,7 @@
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { getStyledMap } from '$lib/map/baseLayer';
 	import { getLotBounds } from '$lib/map/lotBoundaries';
-	import { addLayerControl } from '$lib/map/controls';
+	import { addGeolocateControl, addLayerControl } from '$lib/map/controls';
 
 	let mapElement: HTMLDivElement;
 	let map: maplibregl.Map;
@@ -26,14 +26,8 @@
 			})
 		);
 
-		map.addControl(
-			new maplibregl.GeolocateControl({
-				positionOptions: {
-					enableHighAccuracy: true
-				},
-				trackUserLocation: true
-			})
-		);
+		// GeolocateControl
+		addGeolocateControl(map);
 
 		// Add Layer Control
 		map.on('load', () => {

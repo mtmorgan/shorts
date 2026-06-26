@@ -1,5 +1,75 @@
 import maplibregl from 'maplibre-gl';
 
+/**
+ * Adds a GeolocateControl to the map and injects an overlay HTML text box
+ * into the map container to display the real-time GPS altitude.
+ */
+export const addGeolocateControl = (map: maplibregl.Map): void => {
+	const mapContainer = map.getContainer() as HTMLElement;
+
+	// 1. Create the HTML Text Box overlay
+	const altitudeBox = document.createElement('div');
+	altitudeBox.id = 'altitude-box';
+
+	altitudeBox.style.cssText = `
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: white;
+        padding: 10px;
+        font-family: sans-serif;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        z-index: 1;
+        pointer-events: none; /* Prevents blocking map drag interactions */
+        display: none;        /* Hide the text box by default */
+    `;
+
+	// 2. Add inner structure with placeholders
+	altitudeBox.innerHTML = `<span id="altitude-val" style="font-weight: bold;">--</span> m`;
+
+	// 3. Inject the text box into the map container
+	mapContainer.appendChild(altitudeBox);
+
+	// 4. Instantiate and configure GeolocateControl
+	const geolocate = new maplibregl.GeolocateControl({
+		positionOptions: {
+			enableHighAccuracy: true // Mandatory for receiving GPS altitude data
+		},
+		trackUserLocation: true,
+		showUserLocation: true
+	});
+
+	// 5. Add the native control UI to the map
+	map.addControl(geolocate);
+
+	// Toggle visibility: Show the box when tracking starts
+	geolocate.on('trackuserlocationstart', () => {
+		altitudeBox.style.display = 'block';
+	});
+
+	// Toggle visibility: Hide the box if tracking stops (user pans away or clicks button again)
+	geolocate.on('trackuserlocationend', () => {
+		altitudeBox.style.display = 'none';
+		const altitudeValSpan = document.getElementById('altitude-val');
+		if (altitudeValSpan) altitudeValSpan.innerText = '--'; // Reset content
+	});
+
+	// 6. Listen to geolocate events and update the text box
+	geolocate.on('geolocate', (position: GeolocationPosition) => {
+		const altitudeValSpan = document.getElementById('altitude-val');
+		if (!altitudeValSpan) return;
+
+		const altitude = position.coords.altitude;
+
+		if (altitude !== null) {
+			altitudeValSpan.innerText = altitude.toFixed(0);
+		} else {
+			altitudeValSpan.innerText = 'Unavailable';
+		}
+	});
+};
+
 export const addLayerControl = (map: maplibregl.Map) => {
 	const container = document.createElement('div');
 	container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
