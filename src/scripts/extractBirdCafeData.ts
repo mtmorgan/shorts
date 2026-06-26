@@ -3,6 +3,9 @@ import * as path from 'path';
 import { google, sheets_v4 } from 'googleapis';
 import { fileURLToPath } from 'url';
 
+const SPREADSHEET_ID = '1Yq0bFkUxQCs7xic4lfLfZ_WsZqObXPmQu_Q-htU6pJU'; // Replace with your actual spreadsheet ID
+const SHEET_RANGE = 'Cafe!A5:GA113'; // Replace with your desired sheet name and range
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -21,6 +24,13 @@ function formatDateYYYYMMDD(date: Date): string {
 interface Birds {
 	[key: string]: string[];
 }
+
+const formatBirdName = (name: string): string => {
+	name = name.trim();
+	if (!name.includes(',')) return name;
+	const [species, type] = name.split(',').map((s) => s.trim());
+	return `${type} ${species}`;
+};
 
 /**
  * Fetches data from a specified range in a Google Sheet and returns it as a JSON array.
@@ -67,7 +77,7 @@ export async function getCafeData(
 			const birdsToday: string[] = [];
 			for (let i = 0; i < numRows; i++) {
 				if (rows[i][j] === 'TRUE') {
-					birdsToday.push(rows[i][0].trim());
+					birdsToday.push(formatBirdName(rows[i][0]));
 				}
 			}
 			if (birdsToday.length > 0) {
@@ -87,9 +97,6 @@ export async function getCafeData(
 // --- Example Usage ---
 
 async function main() {
-	const SPREADSHEET_ID = '1Yq0bFkUxQCs7xic4lfLfZ_WsZqObXPmQu_Q-htU6pJU'; // Replace with your actual spreadsheet ID
-	const SHEET_RANGE = 'Cafe!A5:GA100'; // Replace with your desired sheet name and range
-
 	try {
 		const jsonData = await getCafeData(SPREADSHEET_ID, SHEET_RANGE);
 		const jsonString = JSON.stringify(jsonData, null, 2);

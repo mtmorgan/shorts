@@ -11,3 +11,18 @@ export interface Birds {
 export interface BirdDisplayProps {
 	birds: Birds;
 }
+
+export interface BarCount {
+	date: Date;
+	count: number;
+}
+
+export interface PunchPoint {
+	date: Date;
+	species: string;
+}
+
+export interface BirdObservation {
+	species: string;
+	count: number;
+}
