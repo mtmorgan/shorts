@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Styles, Container } from '@sveltestrap/sveltestrap';
-	import OurPlace from '$lib/OurPlace.svelte';
+	import OurPlace from './OurPlace.svelte';
 </script>
 
 <Styles />
