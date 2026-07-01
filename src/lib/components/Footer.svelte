@@ -1,15 +1,15 @@
 <!-- src/lib/components/Footer.svelte -->
 <script lang="ts">
-	import { Container, Row, Col } from '@sveltestrap/sveltestrap';
+	import { Row, Col } from '@sveltestrap/sveltestrap';
 	import PageQRCode from './PageQRCode.svelte';
+	import LayoutContainer from './LayoutContainer.svelte';
 </script>
 
 <footer class="site-footer h-card border-top py-5 mt-5">
-	<a class="u-url d-none" href="/shorts">shorts</a>
-
-	<Container>
+	<LayoutContainer>
+		<a class="u-url d-none" href="/shorts">shorts</a>
 		<Row class="gy-4">
-			<Col xs="12" lg="auto" class="footer-col footer-col-1">
+			<Col xs="12" md="4" class="footer-col footer-col-1">
 				<ul class="contact-list list-unstyled mb-0">
 					<li class="p-name">Martin Morgan</li>
 					<li>
@@ -23,7 +23,7 @@
 				</ul>
 			</Col>
 
-			<Col xs="12" lg="auto" class="footer-col footer-col-2">
+			<Col xs="12" md="3" class="footer-col footer-col-2">
 				<ul class="social-media-list list-unstyled mb-0">
 					<li>
 						<div class="d-flex align-items-center gap-2">
@@ -47,21 +47,22 @@
 				</ul>
 			</Col>
 
-			<Col xs="12" lg="5" class="footer-col footer-col-3">
+			<Col xs="12" md="5" class="footer-col footer-col-3">
 				<p class="text-muted mb-0 small-text">
 					Martin Morgan is an accomplished bioinformatics leader with special
 					expertise in R. Martin originally trained as a biologist interested in
 					the evolution of plant reproductive morphology.
 				</p>
 			</Col>
-
+		</Row>
+		<Row class="gy-4">
 			<Col xs="12" lg="auto" class="footer-col footer-col-4">
 				<div class="qr-wrapper">
 					<PageQRCode />
 				</div>
 			</Col>
 		</Row>
-	</Container>
+	</LayoutContainer>
 </footer>
 
 <style>

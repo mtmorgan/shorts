@@ -31,7 +31,7 @@
 
 <Row>
 	<!-- 100% wide on mobile, smaller relative widths on larger displays -->
-	<Col xs="12" sm="10" md="8" lg="6" xl="4">
+	<Col xs="12" md="6">
 		<div class="table-container">
 			<Table bordered hover>
 				<thead>

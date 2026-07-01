@@ -1,31 +1,51 @@
 <script lang="ts">
-	import {
-		Styles,
-		Container,
-		ListGroup,
-		ListGroupItem
-	} from '@sveltestrap/sveltestrap';
+	import { Styles, ListGroup, ListGroupItem } from '@sveltestrap/sveltestrap';
 </script>
 
 <Styles />
 
-<Container sm>
-	<h1>P5 Shorts</h1>
-	<ListGroup>
-		<ListGroupItem tag="a" href="./ourplace" action>Our Place</ListGroupItem>
-		<ListGroupItem tag="a" href="./mushrooms" action>Mushrooms</ListGroupItem>
-		<ListGroupItem tag="a" href="./birdcafe" action
-			>Bird Caf&eacute;</ListGroupItem
-		>
-		<ListGroupItem tag="a" href="./sun-glitters" action
-			>Sun glitters</ListGroupItem
-		>
-	</ListGroup>
+<h1>Shorts</h1>
 
-	<h2>Implementation notes</h2>
+<p>
+	I am exploring some of the natural history of our place, and at the same time
+	learning about TypeScript and other browser-based user interfaces.
+</p>
 
-	<p>
-		This app uses <a href="https://svelte.dev">Svelte</a> with
-		<a href="https://sveltestrap.js.org">sveltestrap</a>.
-	</p>
-</Container>
+<ListGroup>
+	<ListGroupItem class="border-0 px-0">
+		<a href="./ourplace" class="text-decoration-none">Our Place</a>
+		<span class="text-muted"
+			>— Describes the location and brief history of our property. An
+			interactive map shows the property boundaries and current location using
+			<a href="https://maplibre.org/">MapLibre</a> and GIS resources from the Ontario
+			Ministry of Natural Resources.</span
+		>
+	</ListGroupItem>
+
+	<ListGroupItem class="border-0 px-0">
+		<a href="./mushrooms" class="text-decoration-none">Mushrooms</a>
+		<span class="text-muted"
+			>— A group of us walked through the property taking pictures of mushrooms.
+			Explore our mushrooms here!</span
+		>
+	</ListGroupItem>
+
+	<ListGroupItem class="border-0 px-0">
+		<a href="./birdcafe" class="text-decoration-none">Bird Café</a>
+		<span class="text-muted"
+			>— Each morning in the spring of 2026 we headed from the Hill to the Pond
+			cabin and listened to the birds using the amazing <a
+				href="https://merlin.allaboutbirds.org/">Merlin</a
+			> app. This is a summary of the birds we heard.</span
+		>
+	</ListGroupItem>
+</ListGroup>
+
+<h2>Implementation notes</h2>
+
+<p>
+	This app uses <a href="https://svelte.dev">Svelte 5</a> with
+	<a href="https://sveltestrap.js.org">sveltestrap</a>. I've tried to actually
+	understand the code that I've generated, but these pages have increasingly
+	relied on Google Gemini and other AI resources.
+</p>
