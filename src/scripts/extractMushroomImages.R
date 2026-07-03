@@ -1,4 +1,4 @@
-setwd("/Users/mtmorgan/a/git/shorts/scripts")
+setwd("/Users/mtmorgan/a/git/shorts/src/scripts")
 library(dplyr)
 requireNamespace("exiftoolr")
 requireNamespace("jsonlite")
