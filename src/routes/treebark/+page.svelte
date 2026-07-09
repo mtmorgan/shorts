@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { Button } from '@sveltestrap/sveltestrap';
+	import { Button, Container, Row, Col } from '@sveltestrap/sveltestrap';
+
 	import treesJson from './trees.json';
 
 	const localStorageKey = 'treebark-votes';
@@ -137,31 +138,42 @@
 	</select>
 </div>
 
-<div class="treebark-container">
-	{#each sortedTrees() as tree (tree.id)}
-		<figure id={tree.id}>
-			<a href={tree.url}>
-				<img alt={tree.img.alt} src={tree.img.src} loading="lazy" />
-			</a>
-			<figcaption>
-				<a href={tree.url}>{tree.title}</a>
-				<div class="vote-controls">
-					<span>👁️ {votes[tree.id] || 0}</span>
+<Container fluid class="treebark-container px-0">
+	<Row class="g-3">
+		{#each sortedTrees() as tree (tree.id)}
+			<Col xs={6} lg={4}>
+				<figure id={tree.id} class="d-flex flex-column h-100">
+					<a href={tree.url}>
+						<img
+							alt={tree.img.alt}
+							src={tree.img.src}
+							loading="lazy"
+							class="img-fluid w-100"
+						/>
+					</a>
+					<figcaption class="mb-auto">
+						<a href={tree.url}>{tree.title}</a>
+						<div class="vote-controls">
+							<span>👁️ {votes[tree.id] || 0}</span>
 
-					<!-- Upvote Button -->
-					<Button onclick={() => upvote(tree.id)} class="upvote-btn">▲</Button>
+							<!-- Upvote Button -->
+							<Button onclick={() => upvote(tree.id)} class="upvote-btn"
+								>▲</Button
+							>
 
-					<!-- Conditional Downvote Button -->
-					{#if votes[tree.id] !== undefined && votes[tree.id] !== 0}
-						<Button onclick={() => downvote(tree.id)} class="downvote-btn">
-							▼
-						</Button>
-					{/if}
-				</div>
-			</figcaption>
-		</figure>
-	{/each}
-</div>
+							<!-- Conditional Downvote Button -->
+							{#if votes[tree.id] !== undefined && votes[tree.id] !== 0}
+								<Button onclick={() => downvote(tree.id)} class="downvote-btn">
+									▼
+								</Button>
+							{/if}
+						</div>
+					</figcaption>
+				</figure>
+			</Col>
+		{/each}
+	</Row>
+</Container>
 
 <div class="treebark-sort-controls">
 	<button
@@ -175,40 +187,15 @@
 <h2>Implementation Notes</h2>
 
 <p>
-	The idea for this page came from a comment by Will F that it would be great to
+	The idea for this page came from Will F's comment that it would be great to
 	know what trees might make an appearance during <a href="/woods/"
 		>A Walk in the Woods</a
 	>. This was originally written as pure JavaScript, with Google Gemini writing
-	most of the JavaScript and CSS code, although I prompted and made revisions. I
-	moved it to Svelte at a later date.
+	most of the JavaScript and CSS code. I moved it to Svelte at a later date,
+	resulting in much more compact code.
 </p>
 
 <style>
-	/* Figure display */
-
-	.treebark-container {
-		display: flex;
-		flex-wrap: wrap; /* Figures will be side-by-side on a wide screen */
-		gap: 2px; /* Adds space between figures */
-		margin-top: 20px;
-		margin-bottom: 20px;
-	}
-
-	.treebark-container figure {
-		flex-basis: calc(33.33% - 4px); /* Three items per row, and gap */
-	}
-
-	.treebark-container img {
-		width: 200px;
-		height: auto;
-	}
-
-	@media screen and (max-width: 600px) {
-		.treebark-container figure {
-			flex-basis: calc(50% - 4px);
-		}
-	}
-
 	/* Upvote, downvote, and sort */
 
 	:global(.upvote-btn) {
