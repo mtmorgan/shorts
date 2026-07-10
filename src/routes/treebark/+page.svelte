@@ -1,8 +1,16 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { Button, Container, Row, Col } from '@sveltestrap/sveltestrap';
+	import {
+		Button,
+		Container,
+		Row,
+		Col,
+		FormGroup,
+		Label,
+		Input
+	} from '@sveltestrap/sveltestrap';
 
-	import treesJson from './trees.json';
+	import jsonTrees from './trees.json';
 
 	const localStorageKey = 'treebark-votes';
 
@@ -20,7 +28,7 @@
 		| 'treebark-title-asc'
 		| 'treebark-title-desc';
 
-	let trees = $state<TreeData[]>(treesJson);
+	let trees = $state<TreeData[]>(jsonTrees);
 	let votes = $state<Votes>({});
 
 	let searchQuery = $state('');
@@ -34,11 +42,8 @@
 
 	// Sort figures based on vote count or caption.
 
-	const compareByViewed = (votes: Votes, a: TreeData, b: TreeData) => {
-		const votesA = votes[a.id] || 0;
-		const votesB = votes[b.id] || 0;
-		return votesB - votesA;
-	};
+	const compareByViewed = (votes: Votes, a: TreeData, b: TreeData) =>
+		(votes[b.id] || 0) - (votes[a.id] || 0) || a.title.localeCompare(b.title);
 
 	const compareByCaption = (a: TreeData, b: TreeData) => {
 		return a.title.localeCompare(b.title);
@@ -105,7 +110,7 @@
 
 <p>
 	<a href="https://www.ontario.ca/page/tree-atlas/ontario-southcentral"
-		>The Tree Atlas: South Central region</a
+		>The Tree Atlas: South Central Region</a
 	>
 	from the Ontario Ministry of Natural Resources (MNR) introduces the native trees
 	of our region. The MNR site emphasizes leaves for identifying trees, but here we
@@ -121,22 +126,32 @@
 	trees.
 </p>
 
-<div class="treebark-sort-controls">
-	<label for="treebark-search-input">Filter:</label>
-	<input
-		type="text"
-		id="treebark-search-input"
-		placeholder="Type to filter..."
-		bind:value={searchQuery}
-	/>
-	<br />
-	<label for="treebark-sort-select">Keep sorted by:</label>
-	<select bind:value={sortSelection} id="treebark-sort-select">
-		<option value="treebark-viewed-desc">Views</option>
-		<option value="treebark-title-asc">Title (A-Z)</option>
-		<option value="treebark-title-desc">Title (Z-A)</option>
-	</select>
-</div>
+<Row class="treebark-sort-controls g-3 mb-4">
+	<!-- Filter Input Column -->
+	<Col xs={12} sm={6}>
+		<FormGroup>
+			<Label for="treebark-search-input">Filter:</Label>
+			<Input
+				type="text"
+				id="treebark-search-input"
+				placeholder="Type to filter..."
+				bind:value={searchQuery}
+			/>
+		</FormGroup>
+	</Col>
+
+	<!-- Sort Dropdown Column -->
+	<Col xs={12} sm={6}>
+		<FormGroup>
+			<Label for="treebark-sort-select">Keep sorted by:</Label>
+			<Input type="select" id="treebark-sort-select" bind:value={sortSelection}>
+				<option value="treebark-viewed-desc">Views</option>
+				<option value="treebark-title-asc">Title (A-Z)</option>
+				<option value="treebark-title-desc">Title (Z-A)</option>
+			</Input>
+		</FormGroup>
+	</Col>
+</Row>
 
 <Container fluid class="treebark-container px-0">
 	<Row class="g-3">
@@ -157,13 +172,14 @@
 							<span>👁️ {votes[tree.id] || 0}</span>
 
 							<!-- Upvote Button -->
-							<Button onclick={() => upvote(tree.id)} class="upvote-btn"
-								>▲</Button
-							>
+							<Button color="success" onclick={() => upvote(tree.id)}>▲</Button>
 
 							<!-- Conditional Downvote Button -->
 							{#if votes[tree.id] !== undefined && votes[tree.id] !== 0}
-								<Button onclick={() => downvote(tree.id)} class="downvote-btn">
+								<Button
+									color="outline-secondary"
+									onclick={() => downvote(tree.id)}
+								>
 									▼
 								</Button>
 							{/if}
@@ -175,14 +191,19 @@
 	</Row>
 </Container>
 
-<div class="treebark-sort-controls">
-	<button
-		type="button"
-		id="treebark-reset-votes-button"
-		class="dangerous-action-button"
-		onclick={() => resetAllCounters()}>Reset All Counts</button
-	>
-</div>
+<Row class="treebark-sort-controls mb-4">
+	<Col xs={12}>
+		<!-- color="danger" automatically applies Bootstrap's red destructive button style -->
+		<Button
+			type="button"
+			id="treebark-reset-votes-button"
+			color="danger"
+			onclick={() => resetAllCounters()}
+		>
+			⚠️ Reset All Counts
+		</Button>
+	</Col>
+</Row>
 
 <h2>Implementation Notes</h2>
 
@@ -194,46 +215,3 @@
 	most of the JavaScript and CSS code. I moved it to Svelte at a later date,
 	resulting in much more compact code.
 </p>
-
-<style>
-	/* Upvote, downvote, and sort */
-
-	:global(.upvote-btn) {
-		background-color: #2e7d32;
-		color: white;
-	}
-
-	:global(.downvote-btn) {
-		background-color: white;
-		color: black;
-	}
-
-	/* Dangerous action button */
-
-	.dangerous-action-button {
-		/* Accessible red with high contrast white text */
-		background-color: #b30000; /* A dark red */
-		color: #ffffff; /* White text for contrast */
-		border: none;
-		padding: 5px 10px;
-		cursor: pointer;
-		border-radius: 4px;
-
-		/* Add padding to account for the icon */
-		padding-left: 28px;
-		position: relative;
-	}
-
-	/* Add a visual cue with a Unicode warning icon */
-	.dangerous-action-button::before {
-		content: '⚠️'; /* Warning emoji */
-		position: absolute;
-		left: 8px;
-		top: 50%;
-		transform: translateY(-50%);
-	}
-
-	.dangerous-action-button:hover {
-		background-color: #800000; /* Darken on hover */
-	}
-</style>
