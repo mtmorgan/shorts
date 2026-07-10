@@ -1,25 +1,78 @@
 <script lang="ts">
-	import { Container, Row, Col } from '@sveltestrap/sveltestrap';
+	import {
+		Container,
+		Row,
+		Col,
+		FormGroup,
+		Label,
+		Input,
+		Button,
+		Form
+	} from '@sveltestrap/sveltestrap';
 	import * as THREE from 'three';
 
 	import imageSrc from './IMG_2524.jpeg';
 	import vertexShader from './shaders/vertex.glsl?raw';
 	import fragmentShader from './shaders/fragment.glsl?raw';
 
+	interface PresetConfig {
+		lerpFactor: number;
+		distortionSpike: number;
+		waveFrequency: number;
+		expansionSpeed: number;
+		displayName: string;
+	}
+
 	let canvasElement: HTMLCanvasElement;
+
+	// Centralized Preset Registry (Easily add fields or new options here!)
+	const PRESETS: Record<string, PresetConfig> = {
+		raindrop: {
+			lerpFactor: 0.15,
+			distortionSpike: 0.02,
+			waveFrequency: 85.0,
+			expansionSpeed: 24.0,
+			displayName: '💧 Raindrop'
+		},
+		bird: {
+			lerpFactor: 0.04,
+			distortionSpike: 0.09,
+			waveFrequency: 32.0,
+			expansionSpeed: 11.0,
+			displayName: '🦆 Bird Splash'
+		}
+	};
+	let selectedPreset = $state(Object.keys(PRESETS)[0]);
+
 	let uniforms: {
 		uTime: { value: number };
 		uClickTime: { value: number };
 		uSplashCenter: { value: THREE.Vector2 };
 		uDistortionStrength: { value: number };
+		uWaveFrequency: { value: number };
+		uExpansionSpeed: { value: number };
 		uTexture: { value: THREE.Texture | null }; // Texture slot configuration
 	} | null = null;
 
 	let currentDistortion = 0;
 	let targetDistortion = 0;
 
-	const LERP_FACTOR = 0.008; // Slightly slower for a more natural liquid drag
-	const DISTORTION_SPIKE = 0.7; // Higher spike for deeper water displacement
+	// Sliders
+	let lerpFactor = $state(0.008);
+	let distortionSpike = $state(0.07);
+	let waveFrequency = $state(85.0);
+	let expansionSpeed = $state(24.0);
+
+	// 3. Dynamic lookup handler (No more if/else blocks needed!)
+	const applyPreset = () => {
+		const targetConfig = PRESETS[selectedPreset];
+		if (!targetConfig) return;
+
+		lerpFactor = targetConfig.lerpFactor;
+		distortionSpike = targetConfig.distortionSpike;
+		waveFrequency = targetConfig.waveFrequency;
+		expansionSpeed = targetConfig.expansionSpeed;
+	};
 
 	$effect(() => {
 		if (!canvasElement) return;
@@ -34,16 +87,18 @@
 		});
 		renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-		// 2. Add the texture entry to uniforms object
+		// Add the texture entry to uniforms object
 		uniforms = {
 			uTime: { value: 0 },
-			uClickTime: { value: 0 }, // New uniform to send click timestamp to GPU
+			uClickTime: { value: 0 },
 			uSplashCenter: { value: new THREE.Vector2(0.5, 0.5) },
 			uDistortionStrength: { value: 0 },
-			uTexture: { value: null } // Starts empty, filled below
+			uWaveFrequency: { value: 0 },
+			uExpansionSpeed: { value: 0 },
+			uTexture: { value: null }
 		};
 
-		// 3. Load your water image asynchronously
+		// Load image asynchronously
 		const textureLoader = new THREE.TextureLoader();
 		textureLoader.load(imageSrc, (texture) => {
 			if (uniforms) {
@@ -73,9 +128,11 @@
 
 			if (uniforms) {
 				uniforms.uTime.value = timer.getElapsed();
+				uniforms.uWaveFrequency.value = waveFrequency;
+				uniforms.uExpansionSpeed.value = expansionSpeed;
 
 				currentDistortion +=
-					(targetDistortion - currentDistortion) * LERP_FACTOR;
+					(targetDistortion - currentDistortion) * lerpFactor;
 				uniforms.uDistortionStrength.value = currentDistortion;
 				targetDistortion += (0.0 - targetDistortion) * 0.04; // Slower decay for water
 			}
@@ -113,7 +170,7 @@
 
 		uniforms.uSplashCenter.value.set(x, y);
 		uniforms.uClickTime.value = uniforms.uTime.value;
-		targetDistortion = DISTORTION_SPIKE;
+		targetDistortion = distortionSpike;
 	};
 </script>
 
@@ -131,7 +188,90 @@
 	explore the effects of light and reflection.
 </p>
 
-<Container fluid={true} class="p-0 overflow-hidden">
+<Row class="g-3 mb-4">
+	<Col xs={12} sm={6}>
+		<FormGroup class="mb-3">
+			<Label>
+				Wave Speed / Easing ({lerpFactor})
+			</Label>
+			<Input
+				type="range"
+				min="0.001"
+				max="0.30"
+				step="0.01"
+				bind:value={lerpFactor}
+			/>
+		</FormGroup>
+	</Col>
+
+	<Col xs={12} sm={6}>
+		<FormGroup class="mb-0">
+			<Label>
+				Ripple Height / Strength ({distortionSpike})
+			</Label>
+			<Input
+				type="range"
+				min="0.01"
+				max="0.25"
+				step="0.01"
+				bind:value={distortionSpike}
+			/>
+		</FormGroup>
+	</Col>
+
+	<Col xs={12} sm={6}>
+		<FormGroup class="mb-0">
+			<Label>
+				Ring Density / Frequency ({waveFrequency})
+			</Label>
+			<Input
+				type="range"
+				min="20.0"
+				max="150.0"
+				step="1.0"
+				bind:value={waveFrequency}
+			/>
+		</FormGroup>
+	</Col>
+
+	<Col xs={12} sm={6}>
+		<FormGroup class="mb-0">
+			<Label>
+				Expansion Speed ({expansionSpeed})
+			</Label>
+			<Input
+				type="range"
+				min="5.0"
+				max="50.0"
+				step="0.5"
+				bind:value={expansionSpeed}
+			/>
+		</FormGroup>
+	</Col>
+</Row>
+
+<Row class="g-3 align-items-end">
+	<Col xs={9} sm={4}>
+		<FormGroup class="mb-0">
+			<Label>Environment Preset</Label>
+			<Input type="select" bind:value={selectedPreset}>
+				{#each Object.entries(PRESETS) as [key, config]}
+					<option value={key}>{config.displayName}</option>
+				{/each}
+			</Input>
+		</FormGroup>
+	</Col>
+
+	<Col xs={3} sm={2}>
+		<FormGroup class="mb-0 d-grid">
+			<Label class="d-none d-sm-block">&nbsp;</Label>
+
+			<Button onclick={applyPreset}>Apply</Button>
+		</FormGroup>
+	</Col>
+</Row>
+
+<Container fluid={true} class="p-0 overflow-hidden position-relative">
 	<Row class="g-0">
 		<Col xs="12">
 			<div class="canvas-wrapper">
