@@ -23,6 +23,13 @@
 	</ListGroupItem>
 
 	<ListGroupItem class="border-0 px-0">
+		<a href="./treebark" class="text-decoration-none">Tree Bark</a>
+		<span class="text-muted"
+			>— Identify trees from their bark; especially useful in winter.</span
+		>
+	</ListGroupItem>
+
+	<ListGroupItem class="border-0 px-0">
 		<a href="./mushrooms" class="text-decoration-none">Mushrooms</a>
 		<span class="text-muted"
 			>— A group of us walked through the property taking pictures of mushrooms.
