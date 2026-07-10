@@ -1,11 +1,15 @@
 <script lang="ts">
 	import { Container, Row, Col } from '@sveltestrap/sveltestrap';
 	import * as THREE from 'three';
+
 	import imageSrc from './IMG_2524.jpeg';
+	import vertexShader from './shaders/vertex.glsl?raw';
+	import fragmentShader from './shaders/fragment.glsl?raw';
 
 	let canvasElement: HTMLCanvasElement;
 	let uniforms: {
 		uTime: { value: number };
+		uClickTime: { value: number };
 		uSplashCenter: { value: THREE.Vector2 };
 		uDistortionStrength: { value: number };
 		uTexture: { value: THREE.Texture | null }; // Texture slot configuration
@@ -15,7 +19,7 @@
 	let targetDistortion = 0;
 
 	const LERP_FACTOR = 0.008; // Slightly slower for a more natural liquid drag
-	const DISTORTION_SPIKE = 0.07; // Higher spike for deeper water displacement
+	const DISTORTION_SPIKE = 0.7; // Higher spike for deeper water displacement
 
 	$effect(() => {
 		if (!canvasElement) return;
@@ -33,6 +37,7 @@
 		// 2. Add the texture entry to uniforms object
 		uniforms = {
 			uTime: { value: 0 },
+			uClickTime: { value: 0 }, // New uniform to send click timestamp to GPU
 			uSplashCenter: { value: new THREE.Vector2(0.5, 0.5) },
 			uDistortionStrength: { value: 0 },
 			uTexture: { value: null } // Starts empty, filled below
@@ -51,38 +56,8 @@
 		const geometry = new THREE.PlaneGeometry(2, 2);
 		const material = new THREE.ShaderMaterial({
 			uniforms: uniforms,
-			vertexShader: `
-				varying vec2 vUv;
-				void main() {
-					vUv = uv;
-					gl_Position = vec4(position, 1.0);
-				}
-			`,
-			fragmentShader: `
-				uniform float uTime;
-				uniform float uDistortionStrength;
-				uniform vec2 uSplashCenter;
-				uniform sampler2D uTexture; // Handle the image stream input
-				varying vec2 vUv;
-
-				void main() {
-					float dist = distance(vUv, uSplashCenter);
-
-					// Calculate a liquid refraction wave pattern
-					float wave = sin(dist * 35.0 - uTime * 8.0) * uDistortionStrength;
-
-					// Displace the coordinates outward from the click position
-					vec2 distortedUv = vUv + normalize(vUv - uSplashCenter) * wave;
-
-					// Ensure coordinates lock to borders to prevent screen edge bleeding
-					distortedUv = clamp(distortedUv, 0.0, 1.0);
-
-					// Sample the actual image pixels using the distorted UV mapping
-					vec4 texColor = texture2D(uTexture, distortedUv);
-
-					gl_FragColor = texColor;
-				}
-			`
+			vertexShader: vertexShader,
+			fragmentShader: fragmentShader
 		});
 
 		const mesh = new THREE.Mesh(geometry, material);
@@ -137,6 +112,7 @@
 		const y = 1.0 - (event.clientY - rect.top) / rect.height;
 
 		uniforms.uSplashCenter.value.set(x, y);
+		uniforms.uClickTime.value = uniforms.uTime.value;
 		targetDistortion = DISTORTION_SPIKE;
 	};
 </script>
