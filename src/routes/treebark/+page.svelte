@@ -115,8 +115,9 @@
 	from the Ontario Ministry of Natural Resources (MNR) introduces the native trees
 	of our region. The MNR site emphasizes leaves for identifying trees, but here we
 	use bark. Reviewing tree bark can help identify trees during
-	<a href="/woods/">A Walk in the Woods</a>, especially in winter! Not all
-	species are present at <a href="ourplace">our place</a>.
+	<a href="https://mtmorgan.github.io/woods/">A Walk in the Woods</a>,
+	especially in winter! Not all species are present at
+	<a href="ourplace">our place</a>.
 </p>
 
 <p>
@@ -209,8 +210,8 @@
 
 <p>
 	The idea for this page came from Will F's comment that it would be great to
-	know what trees might make an appearance during <a href="/woods/"
-		>A Walk in the Woods</a
+	know what trees might make an appearance during <a
+		href="https://mtmorgan.github.io/woods/">A Walk in the Woods</a
 	>. This was originally written as pure JavaScript, with Google Gemini writing
 	most of the JavaScript and CSS code. I moved it to Svelte at a later date,
 	resulting in much more compact code.
