@@ -12,8 +12,8 @@ void main() {
   float dist = distance(vUv, uSplashCenter);
 
   // 1. Core Wave Equation
-  // Higher frequency (45.0) creates tighter, multiple concentric rings.
-  // Higher speed (15.0) makes the ripples race outward faster.
+  // Higher frequency (e.g., 45.0) creates tighter, multiple concentric rings.
+  // Higher speed (e.g., 15.0) makes the ripples race outward faster.
   float wavePhase = timeSinceClick * uExpansionSpeed - dist * uWaveFrequency;
   float baseWave = sin(wavePhase);
 

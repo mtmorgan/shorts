@@ -46,6 +46,14 @@
 			> app. This is a summary of the birds we heard.</span
 		>
 	</ListGroupItem>
+
+	<ListGroupItem class="border-0 px-0">
+		<a href="./splash" class="text-decoration-none">Splash</a>
+		<span class="text-muted"
+			>— Sun reflecting on water creates all kinds of geometric patterns. Splash
+			introduces ripples onto the pond using GLSL (OpenGL Scripting Language).</span
+		>
+	</ListGroupItem>
 </ListGroup>
 
 <h2>Implementation notes</h2>

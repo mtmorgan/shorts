@@ -25,8 +25,20 @@
 
 	let canvasElement: HTMLCanvasElement;
 
+	// State variables to store the true dimensions of the image
+	let imgWidth = $state(1);
+	let imgHeight = $state(1);
+	let aspectRatioStyle = $derived(`aspect-ratio: ${imgWidth} / ${imgHeight};`);
+
 	// Centralized Preset Registry (Easily add fields or new options here!)
-	const PRESETS: Record<string, PresetConfig> = {
+	const PRESETS = $state<Record<string, PresetConfig>>({
+		initial: {
+			lerpFactor: 0.008,
+			distortionSpike: 0.07,
+			waveFrequency: 85.0,
+			expansionSpeed: 24.0,
+			displayName: 'Default'
+		},
 		raindrop: {
 			lerpFactor: 0.15,
 			distortionSpike: 0.02,
@@ -41,7 +53,7 @@
 			expansionSpeed: 11.0,
 			displayName: '🦆 Bird Splash'
 		}
-	};
+	});
 	let selectedPreset = $state(Object.keys(PRESETS)[0]);
 
 	let uniforms: {
@@ -63,9 +75,15 @@
 	let waveFrequency = $state(85.0);
 	let expansionSpeed = $state(24.0);
 
-	// 3. Dynamic lookup handler (No more if/else blocks needed!)
-	const applyPreset = () => {
-		const targetConfig = PRESETS[selectedPreset];
+	let isSlidersDirty = $derived(
+		lerpFactor !== PRESETS[selectedPreset]?.lerpFactor ||
+			distortionSpike !== PRESETS[selectedPreset]?.distortionSpike ||
+			waveFrequency !== PRESETS[selectedPreset]?.waveFrequency ||
+			expansionSpeed !== PRESETS[selectedPreset]?.expansionSpeed
+	);
+
+	const applyPreset = (key: string) => {
+		const targetConfig = PRESETS[key];
 		if (!targetConfig) return;
 
 		lerpFactor = targetConfig.lerpFactor;
@@ -105,6 +123,9 @@
 				// Prevent texture stretching or pixelation mapping
 				texture.minFilter = THREE.LinearFilter;
 				uniforms.uTexture.value = texture;
+				// Get dimensions of image for display scaling
+				imgWidth = texture.image.width;
+				imgHeight = texture.image.height;
 			}
 		});
 
@@ -253,28 +274,32 @@
 <Row class="g-3 align-items-end">
 	<Col xs={9} sm={4}>
 		<FormGroup class="mb-0">
-			<Label>Environment Preset</Label>
-			<Input type="select" bind:value={selectedPreset}>
+			<Label>Presets</Label>
+			<Input
+				type="select"
+				bind:value={selectedPreset}
+				onchange={(e) => applyPreset(e.currentTarget.value)}
+			>
 				{#each Object.entries(PRESETS) as [key, config]}
 					<option value={key}>{config.displayName}</option>
 				{/each}
 			</Input>
 		</FormGroup>
 	</Col>
-
-	<Col xs={3} sm={2}>
-		<FormGroup class="mb-0 d-grid">
-			<Label class="d-none d-sm-block">&nbsp;</Label>
-
-			<Button onclick={applyPreset}>Apply</Button>
-		</FormGroup>
-	</Col>
+	{#if isSlidersDirty}
+		<Col xs={3} sm={2}>
+			<FormGroup class="mb-0">
+				<Label>&nbsp;</Label>
+				<Button onclick={() => applyPreset(selectedPreset)}>Reset</Button>
+			</FormGroup>
+		</Col>
+	{/if}
 </Row>
 
 <Container fluid={true} class="p-0 overflow-hidden position-relative">
 	<Row class="g-0">
 		<Col xs="12">
-			<div class="canvas-wrapper">
+			<div class="canvas-wrapper mx-auto" style={aspectRatioStyle}>
 				<canvas bind:this={canvasElement} onclick={handleCanvasClick}></canvas>
 			</div>
 		</Col>
@@ -295,7 +320,8 @@
 <style>
 	.canvas-wrapper {
 		width: 100%;
-		height: 100vh;
+		max-width: 100%; /* Keep bounding limits within bounds on laptops */
+		max-height: 100vh;
 		overflow: hidden;
 		background: #000; /* Fallback color while image loads */
 	}
