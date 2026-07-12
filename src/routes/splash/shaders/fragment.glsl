@@ -1,16 +1,22 @@
 uniform float uTime;
 uniform float uClickTime;
+uniform vec2 uSplashCenter;
+uniform float uAspect;
 uniform float uDistortionStrength;
 uniform float uWaveFrequency;
 uniform float uExpansionSpeed;
 uniform float uMaxRadius;
-uniform vec2 uSplashCenter;
 uniform sampler2D uTexture;
 varying vec2 vUv;
 
 void main() {
   float timeSinceClick = uTime - uClickTime;
-  float dist = distance(vUv, uSplashCenter);
+
+  // Correct 'dist' for aspect ratio so the splash calculations are done in a
+  // uniform grid
+  vec2 aspectUv = vec2(vUv.x * uAspect, vUv.y);
+  vec2 aspectSplash = vec2(uSplashCenter.x * uAspect, uSplashCenter.y);
+  float dist = distance(aspectUv, aspectSplash);
 
   // 1. Core Wave Equation
   // Higher frequency (e.g., 45.0) creates tighter, multiple concentric rings.
@@ -33,13 +39,18 @@ void main() {
 
   // 4. Define the Distance Boundary Mask (Restricted to 10% of texture space)
   float distanceMask = smoothstep(uMaxRadius, uMaxRadius * 0.7, dist);
+
   // 5. Combine into an isolated, propagating wave packet
-  // The overall distortion strength scales down based on the Svelte file's lerp decay
+  // The overall distortion strength scales down based on the Svelte file's
+  // lerp decay
   float finalWave = baseWave * waveFront * wakeDecay * distanceMask * uDistortionStrength;
+
   // 6. Apply the refraction displacement vectors
   vec2 distortedUv = vUv;
   if (dist > 0.0) {
-    distortedUv += normalize(vUv - uSplashCenter) * finalWave;
+    // Normalize along the aspect-corrected vector, but apply changes back to
+    // standard vUv space
+    distortedUv += normalize(aspectUv - aspectSplash) * finalWave;
   }
 
   // Keep UVs clamped inside safe 0.0-1.0 texture boundaries

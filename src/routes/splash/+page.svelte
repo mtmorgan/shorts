@@ -97,6 +97,14 @@
 		};
 	let selectedPreset = $state(Object.keys(PRESETS)[0]);
 
+	let config = $state<SplashConfig>({
+		lerpFactor: 0.05,
+		distortionSpike: 0.03,
+		waveFrequency: 45.0,
+		expansionSpeed: 15.0,
+		maxRadius: 0.1
+	});
+
 	let uniforms: {
 		uTime: { value: number };
 		uClickTime: { value: number };
@@ -106,19 +114,11 @@
 		uExpansionSpeed: { value: number };
 		uMaxRadius: { value: number };
 		uTexture: { value: THREE.Texture | null }; // Texture slot configuration
+		uAspect: { value: number };
 	} | null = null;
 
 	let currentDistortion = 0;
 	let targetDistortion = 0;
-
-	// Sliders
-	let config = $state<SplashConfig>({
-		lerpFactor: 0.05,
-		distortionSpike: 0.03,
-		waveFrequency: 45.0,
-		expansionSpeed: 15.0,
-		maxRadius: 0.1
-	});
 
 	let isSlidersDirty = $derived.by(() => {
 		const preset = PRESETS[selectedPreset]?.values;
@@ -160,7 +160,8 @@
 			uWaveFrequency: { value: 0 },
 			uExpansionSpeed: { value: 0 },
 			uMaxRadius: { value: 0 },
-			uTexture: { value: null }
+			uTexture: { value: null },
+			uAspect: { value: 1 }
 		};
 
 		// Load image asynchronously
@@ -173,6 +174,7 @@
 				// Get dimensions of image for display scaling
 				imgWidth = texture.image.width;
 				imgHeight = texture.image.height;
+				uniforms.uAspect.value = imgWidth / imgHeight;
 			}
 		});
 
