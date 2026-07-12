@@ -20,6 +20,7 @@
 		distortionSpike: number;
 		waveFrequency: number;
 		expansionSpeed: number;
+		maxRadius: number;
 		displayName: string;
 	}
 
@@ -37,6 +38,7 @@
 			distortionSpike: 0.07,
 			waveFrequency: 85.0,
 			expansionSpeed: 24.0,
+			maxRadius: 0.1,
 			displayName: 'Default'
 		},
 		raindrop: {
@@ -44,6 +46,7 @@
 			distortionSpike: 0.02,
 			waveFrequency: 85.0,
 			expansionSpeed: 24.0,
+			maxRadius: 0.1,
 			displayName: '💧 Raindrop'
 		},
 		bird: {
@@ -51,6 +54,7 @@
 			distortionSpike: 0.09,
 			waveFrequency: 32.0,
 			expansionSpeed: 11.0,
+			maxRadius: 0.2,
 			displayName: '🦆 Bird Splash'
 		}
 	});
@@ -63,6 +67,7 @@
 		uDistortionStrength: { value: number };
 		uWaveFrequency: { value: number };
 		uExpansionSpeed: { value: number };
+		uMaxRadius: { value: number };
 		uTexture: { value: THREE.Texture | null }; // Texture slot configuration
 	} | null = null;
 
@@ -74,12 +79,14 @@
 	let distortionSpike = $state(0.07);
 	let waveFrequency = $state(85.0);
 	let expansionSpeed = $state(24.0);
+	let maxRadius = $state(0.1);
 
 	let isSlidersDirty = $derived(
 		lerpFactor !== PRESETS[selectedPreset]?.lerpFactor ||
 			distortionSpike !== PRESETS[selectedPreset]?.distortionSpike ||
 			waveFrequency !== PRESETS[selectedPreset]?.waveFrequency ||
-			expansionSpeed !== PRESETS[selectedPreset]?.expansionSpeed
+			expansionSpeed !== PRESETS[selectedPreset]?.expansionSpeed ||
+			maxRadius !== PRESETS[selectedPreset]?.maxRadius
 	);
 
 	const applyPreset = (key: string) => {
@@ -90,6 +97,7 @@
 		distortionSpike = targetConfig.distortionSpike;
 		waveFrequency = targetConfig.waveFrequency;
 		expansionSpeed = targetConfig.expansionSpeed;
+		maxRadius = targetConfig.maxRadius;
 	};
 
 	$effect(() => {
@@ -113,6 +121,7 @@
 			uDistortionStrength: { value: 0 },
 			uWaveFrequency: { value: 0 },
 			uExpansionSpeed: { value: 0 },
+			uMaxRadius: { value: 0 },
 			uTexture: { value: null }
 		};
 
@@ -151,6 +160,7 @@
 				uniforms.uTime.value = timer.getElapsed();
 				uniforms.uWaveFrequency.value = waveFrequency;
 				uniforms.uExpansionSpeed.value = expansionSpeed;
+				uniforms.uMaxRadius.value = maxRadius;
 
 				currentDistortion +=
 					(targetDistortion - currentDistortion) * lerpFactor;
@@ -266,6 +276,21 @@
 				max="50.0"
 				step="0.5"
 				bind:value={expansionSpeed}
+			/>
+		</FormGroup>
+	</Col>
+
+	<Col xs={12} sm={6}>
+		<FormGroup class="mb-0">
+			<Label>
+				Maximum Radius ({maxRadius})
+			</Label>
+			<Input
+				type="range"
+				min="0.02"
+				max="0.5"
+				step="0.02"
+				bind:value={maxRadius}
 			/>
 		</FormGroup>
 	</Col>

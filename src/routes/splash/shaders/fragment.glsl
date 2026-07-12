@@ -3,6 +3,7 @@ uniform float uClickTime;
 uniform float uDistortionStrength;
 uniform float uWaveFrequency;
 uniform float uExpansionSpeed;
+uniform float uMaxRadius;
 uniform vec2 uSplashCenter;
 uniform sampler2D uTexture;
 varying vec2 vUv;
@@ -30,12 +31,16 @@ void main() {
   // This dampens the center over time so it stops shaking after the rings pass.
   float wakeDecay = smoothstep(0.0, 0.4, timeSinceClick - dist);
 
-  // 4. Combine into an isolated, propagating wave packet
+  // 4. Define the Distance Boundary Mask (Restricted to 10% of texture space)
+  float distanceMask = smoothstep(uMaxRadius, uMaxRadius * 0.7, dist);
+  // 5. Combine into an isolated, propagating wave packet
   // The overall distortion strength scales down based on the Svelte file's lerp decay
-  float finalWave = baseWave * waveFront * wakeDecay * uDistortionStrength;
-
-  // 5. Apply the refraction displacement vectors
-  vec2 distortedUv = vUv + normalize(vUv - uSplashCenter) * finalWave;
+  float finalWave = baseWave * waveFront * wakeDecay * distanceMask * uDistortionStrength;
+  // 6. Apply the refraction displacement vectors
+  vec2 distortedUv = vUv;
+  if (dist > 0.0) {
+    distortedUv += normalize(vUv - uSplashCenter) * finalWave;
+  }
 
   // Keep UVs clamped inside safe 0.0-1.0 texture boundaries
   distortedUv = clamp(distortedUv, 0.0, 1.0);
