@@ -6,23 +6,15 @@
 		FormGroup,
 		Label,
 		Input,
-		Button,
-		Form
+		Button
 	} from '@sveltestrap/sveltestrap';
 	import * as THREE from 'three';
+	import RangeComponent from './RangeComponent.svelte';
+	import type { SplashConfig, SliderMetadata } from './types';
 
 	import imageSrc from './IMG_2524.jpeg';
 	import vertexShader from './shaders/vertex.glsl?raw';
 	import fragmentShader from './shaders/fragment.glsl?raw';
-
-	interface PresetConfig {
-		lerpFactor: number;
-		distortionSpike: number;
-		waveFrequency: number;
-		expansionSpeed: number;
-		maxRadius: number;
-		displayName: string;
-	}
 
 	let canvasElement: HTMLCanvasElement;
 
@@ -31,33 +23,78 @@
 	let imgHeight = $state(1);
 	let aspectRatioStyle = $derived(`aspect-ratio: ${imgWidth} / ${imgHeight};`);
 
-	// Centralized Preset Registry (Easily add fields or new options here!)
-	const PRESETS = $state<Record<string, PresetConfig>>({
-		initial: {
-			lerpFactor: 0.008,
-			distortionSpike: 0.07,
-			waveFrequency: 85.0,
-			expansionSpeed: 24.0,
-			maxRadius: 0.1,
-			displayName: 'Default'
+	const SLIDER_DEFINITIONS: SliderMetadata[] = [
+		{
+			key: 'lerpFactor',
+			label: 'Wave Speed / Easing',
+			min: 0.001,
+			max: 0.3,
+			step: 0.01
 		},
-		raindrop: {
-			lerpFactor: 0.15,
-			distortionSpike: 0.02,
-			waveFrequency: 85.0,
-			expansionSpeed: 24.0,
-			maxRadius: 0.1,
-			displayName: '💧 Raindrop'
+		{
+			key: 'distortionSpike',
+			label: 'Ripple Height / Strength',
+			min: 0.01,
+			max: 0.25,
+			step: 0.01
 		},
-		bird: {
-			lerpFactor: 0.04,
-			distortionSpike: 0.09,
-			waveFrequency: 32.0,
-			expansionSpeed: 11.0,
-			maxRadius: 0.2,
-			displayName: '🦆 Bird Splash'
+		{
+			key: 'waveFrequency',
+			label: 'Ring Density / Frequency',
+			min: 20.0,
+			max: 150.0,
+			step: 1.0
+		},
+		{
+			key: 'expansionSpeed',
+			label: 'Expansion Speed',
+			min: 5.0,
+			max: 50.0,
+			step: 0.5
+		},
+		{
+			key: 'maxRadius',
+			label: 'Maximum Radius',
+			min: 0.02,
+			max: 0.5,
+			step: 0.02
 		}
-	});
+	];
+
+	// Centralized Preset Registry (Easily add fields or new options here!)
+	const PRESETS: Record<string, { displayName: string; values: SplashConfig }> =
+		{
+			initial: {
+				displayName: 'Default',
+				values: {
+					lerpFactor: 0.008,
+					distortionSpike: 0.07,
+					waveFrequency: 85.0,
+					expansionSpeed: 24.0,
+					maxRadius: 0.1
+				}
+			},
+			raindrop: {
+				displayName: '💧 Raindrop',
+				values: {
+					lerpFactor: 0.15,
+					distortionSpike: 0.02,
+					waveFrequency: 85.0,
+					expansionSpeed: 24.0,
+					maxRadius: 0.04
+				}
+			},
+			bird: {
+				displayName: '🦆 Bird',
+				values: {
+					lerpFactor: 0.04,
+					distortionSpike: 0.09,
+					waveFrequency: 32.0,
+					expansionSpeed: 11.0,
+					maxRadius: 0.2
+				}
+			}
+		};
 	let selectedPreset = $state(Object.keys(PRESETS)[0]);
 
 	let uniforms: {
@@ -75,29 +112,30 @@
 	let targetDistortion = 0;
 
 	// Sliders
-	let lerpFactor = $state(0.008);
-	let distortionSpike = $state(0.07);
-	let waveFrequency = $state(85.0);
-	let expansionSpeed = $state(24.0);
-	let maxRadius = $state(0.1);
+	let config = $state<SplashConfig>({
+		lerpFactor: 0.05,
+		distortionSpike: 0.03,
+		waveFrequency: 45.0,
+		expansionSpeed: 15.0,
+		maxRadius: 0.1
+	});
 
-	let isSlidersDirty = $derived(
-		lerpFactor !== PRESETS[selectedPreset]?.lerpFactor ||
-			distortionSpike !== PRESETS[selectedPreset]?.distortionSpike ||
-			waveFrequency !== PRESETS[selectedPreset]?.waveFrequency ||
-			expansionSpeed !== PRESETS[selectedPreset]?.expansionSpeed ||
-			maxRadius !== PRESETS[selectedPreset]?.maxRadius
-	);
+	let isSlidersDirty = $derived.by(() => {
+		const preset = PRESETS[selectedPreset]?.values;
+		return (
+			!!preset &&
+			Object.keys(config).some(
+				(k) =>
+					config[k as keyof SplashConfig] !== preset[k as keyof SplashConfig]
+			)
+		);
+	});
 
 	const applyPreset = (key: string) => {
 		const targetConfig = PRESETS[key];
 		if (!targetConfig) return;
-
-		lerpFactor = targetConfig.lerpFactor;
-		distortionSpike = targetConfig.distortionSpike;
-		waveFrequency = targetConfig.waveFrequency;
-		expansionSpeed = targetConfig.expansionSpeed;
-		maxRadius = targetConfig.maxRadius;
+		Object.assign(config, targetConfig.values);
+		isSlidersDirty = false;
 	};
 
 	$effect(() => {
@@ -158,12 +196,12 @@
 
 			if (uniforms) {
 				uniforms.uTime.value = timer.getElapsed();
-				uniforms.uWaveFrequency.value = waveFrequency;
-				uniforms.uExpansionSpeed.value = expansionSpeed;
-				uniforms.uMaxRadius.value = maxRadius;
+				uniforms.uWaveFrequency.value = config.waveFrequency;
+				uniforms.uExpansionSpeed.value = config.expansionSpeed;
+				uniforms.uMaxRadius.value = config.maxRadius;
 
 				currentDistortion +=
-					(targetDistortion - currentDistortion) * lerpFactor;
+					(targetDistortion - currentDistortion) * config.lerpFactor;
 				uniforms.uDistortionStrength.value = currentDistortion;
 				targetDistortion += (0.0 - targetDistortion) * 0.04; // Slower decay for water
 			}
@@ -201,7 +239,7 @@
 
 		uniforms.uSplashCenter.value.set(x, y);
 		uniforms.uClickTime.value = uniforms.uTime.value;
-		targetDistortion = distortionSpike;
+		targetDistortion = config.distortionSpike;
 	};
 </script>
 
@@ -218,82 +256,10 @@
 	are endless... This is a start at using GLSL (OpenGL Shading Language) to
 	explore the effects of light and reflection.
 </p>
-
 <Row class="g-3 mb-4">
-	<Col xs={12} sm={6}>
-		<FormGroup class="mb-3">
-			<Label>
-				Wave Speed / Easing ({lerpFactor})
-			</Label>
-			<Input
-				type="range"
-				min="0.001"
-				max="0.30"
-				step="0.01"
-				bind:value={lerpFactor}
-			/>
-		</FormGroup>
-	</Col>
-
-	<Col xs={12} sm={6}>
-		<FormGroup class="mb-0">
-			<Label>
-				Ripple Height / Strength ({distortionSpike})
-			</Label>
-			<Input
-				type="range"
-				min="0.01"
-				max="0.25"
-				step="0.01"
-				bind:value={distortionSpike}
-			/>
-		</FormGroup>
-	</Col>
-
-	<Col xs={12} sm={6}>
-		<FormGroup class="mb-0">
-			<Label>
-				Ring Density / Frequency ({waveFrequency})
-			</Label>
-			<Input
-				type="range"
-				min="20.0"
-				max="150.0"
-				step="1.0"
-				bind:value={waveFrequency}
-			/>
-		</FormGroup>
-	</Col>
-
-	<Col xs={12} sm={6}>
-		<FormGroup class="mb-0">
-			<Label>
-				Expansion Speed ({expansionSpeed})
-			</Label>
-			<Input
-				type="range"
-				min="5.0"
-				max="50.0"
-				step="0.5"
-				bind:value={expansionSpeed}
-			/>
-		</FormGroup>
-	</Col>
-
-	<Col xs={12} sm={6}>
-		<FormGroup class="mb-0">
-			<Label>
-				Maximum Radius ({maxRadius})
-			</Label>
-			<Input
-				type="range"
-				min="0.02"
-				max="0.5"
-				step="0.02"
-				bind:value={maxRadius}
-			/>
-		</FormGroup>
-	</Col>
+	{#each SLIDER_DEFINITIONS as slider}
+		<RangeComponent {config} {slider} />
+	{/each}
 </Row>
 
 <Row class="g-3 align-items-end">
