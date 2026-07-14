@@ -9,11 +9,14 @@ uniform float uWaveFrequency;
 uniform float uExpansionSpeed;
 uniform float uMaxRadius;
 
+#define MAX_RAIN_DROPS 20
+uniform vec2 uRainCenters[MAX_RAIN_DROPS];
+uniform float uRainTimes[MAX_RAIN_DROPS];
+uniform float uRainStrengths[MAX_RAIN_DROPS];
+
 varying vec2 vUv;
 
 void main() {
-  float timeSinceClick = uTime - uClickTime;
-
   // Horizon & clamp
   float horizonY = 0.69;
   float horizonMask = smoothstep(horizonY, horizonY * 0.9, vUv.y);
@@ -24,29 +27,58 @@ void main() {
   float foregroundBlend = smoothstep(2., 0.0, vUv.y);
   float depthScale = mix(horizonDepth, 1.0, foregroundBlend);
 
-  // Localized vector differences
-  vec2 uvDiff = vUv - uSplashCenter;
-  vec2 perspectiveDiff = vec2(uvDiff.x * uAspect, uvDiff.y * depthScale);
-  float dist = length(perspectiveDiff);
+  vec2 totalDisplacement = vec2(0.0);
 
-  // Wave math
-  float wavePhase = timeSinceClick * uExpansionSpeed - dist * uWaveFrequency;
-  float baseWave = sin(wavePhase);
+  // 1. Splash from user clicks
+  if (uDistortionStrength > 0.0) {
+    float timeSinceClick = uTime - uClickTime;
+    if (timeSinceClick > 0.0 && timeSinceClick < 3.0) {
+      vec2 uvDiff = vUv - uSplashCenter;
+      vec2 perspectiveDiff = vec2(uvDiff.x * uAspect, uvDiff.y * depthScale);
+      float dist = length(perspectiveDiff);
+      if (dist > 0.0) {
+        float wavePhase = timeSinceClick * uExpansionSpeed - dist * uWaveFrequency;
+        float baseWave = sin(wavePhase);
 
-  // Wave front and decay masking
-  float waveFrontSpeed = uExpansionSpeed / 45.0;
-  float waveFront = smoothstep(timeSinceClick * waveFrontSpeed + 0.1, timeSinceClick * waveFrontSpeed, dist);
-  float wakeDecay = smoothstep(0.0, 0.4, timeSinceClick - dist);
-  float distanceMask = smoothstep(uMaxRadius, uMaxRadius * 0.7, dist);
+        float waveFrontSpeed = uExpansionSpeed / 45.0;
+        float waveFront = smoothstep(timeSinceClick * waveFrontSpeed + 0.1, timeSinceClick * waveFrontSpeed, dist);
+        float wakeDecay = smoothstep(0.0, 0.4, timeSinceClick - dist);
+        float distanceMask = smoothstep(uMaxRadius, uMaxRadius * 0.7, dist);
 
-  // Isolated distortion mask
-  float finalWave = baseWave * waveFront * wakeDecay * distanceMask * horizonMask * uDistortionStrength;
-
-  // Displacement
-  vec2 distortedUv = vUv;
-  if (dist > 0.0) {
-    distortedUv += normalize(vUv - uSplashCenter) * finalWave;
+        float finalWave = baseWave * waveFront * wakeDecay * distanceMask * horizonMask * uDistortionStrength;
+        totalDisplacement += normalize(uvDiff) * finalWave;
+      }
+    }
   }
+
+  // 2. Ambient raindrops from circular buffer
+  for (int i = 0; i < MAX_RAIN_DROPS; i++) {
+    float rainTime = uRainTimes[i];
+    float rainStrength = uRainStrengths[i];
+    if (rainTime > 0.0 && rainStrength > 0.0) {
+      float timeSinceRain = uTime - rainTime;
+      if (timeSinceRain > 0.0 && timeSinceRain < 2.5) {
+        vec2 uvDiff = vUv - uRainCenters[i];
+        vec2 perspectiveDiff = vec2(uvDiff.x * uAspect, uvDiff.y * depthScale);
+        float dist = length(perspectiveDiff);
+        if (dist > 0.0) {
+          float wavePhase = timeSinceRain * uExpansionSpeed - dist * uWaveFrequency;
+          float baseWave = sin(wavePhase);
+
+          float waveFrontSpeed = uExpansionSpeed / 45.0;
+          float waveFront = smoothstep(timeSinceRain * waveFrontSpeed + 0.1, timeSinceRain * waveFrontSpeed, dist);
+          float wakeDecay = smoothstep(0.0, 0.4, timeSinceRain - dist) * (1.0 - smoothstep(0.0, 2.0, timeSinceRain));
+          float rainMaxRadius = uMaxRadius * 0.6;
+          float distanceMask = smoothstep(rainMaxRadius, rainMaxRadius * 0.7, dist);
+
+          float finalWave = baseWave * waveFront * wakeDecay * distanceMask * horizonMask * rainStrength;
+          totalDisplacement += normalize(uvDiff) * finalWave;
+        }
+      }
+    }
+  }
+
+  vec2 distortedUv = vUv + totalDisplacement;
 
   gl_FragColor = texture2D(uTexture, clamp(distortedUv, 0.0, 1.0));
 

@@ -101,6 +101,9 @@
 		...PRESETS[defaultPresetKey].values
 	});
 
+	let rainIntensity = $state(2.0); // raindrops per second. 0 to disable.
+	let rainStrength = $state(0.04); // height / distortion of raindrops.
+
 	let uniforms: {
 		uTime: { value: number };
 		uClickTime: { value: number };
@@ -111,12 +114,15 @@
 		uMaxRadius: { value: number };
 		uTexture: { value: THREE.Texture | null }; // Texture slot configuration
 		uAspect: { value: number };
+		uRainCenters: { value: THREE.Vector2[] };
+		uRainTimes: { value: number[] };
+		uRainStrengths: { value: number[] };
 	} | null = null;
 
 	let currentDistortion = 0;
 	let targetDistortion = 0;
 
-	let isSlidersDirty = $derived.by(() => {
+	let isSlidersDirty = $derived.by((): boolean => {
 		const preset = PRESETS[selectedPreset]?.values;
 		return (
 			!!preset &&
@@ -127,7 +133,7 @@
 		);
 	});
 
-	const applyPreset = (key: string) => {
+	const applyPreset = (key: string): void => {
 		const targetConfig = PRESETS[key];
 		if (!targetConfig) return;
 		Object.assign(config, targetConfig.values);
@@ -147,7 +153,15 @@
 		});
 		renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-		// Add the texture entry to uniforms object
+		const MAX_RAIN_DROPS = 20;
+		const rainCenters = Array.from(
+			{ length: MAX_RAIN_DROPS },
+			() => new THREE.Vector2(0, 0)
+		);
+		const rainTimes = Array.from({ length: MAX_RAIN_DROPS }, () => -999.0);
+		const rainStrengths = Array.from({ length: MAX_RAIN_DROPS }, () => 0.0);
+
+		// Add the texture entry and rain arrays to uniforms object
 		uniforms = {
 			uTime: { value: 0 },
 			uClickTime: { value: 0 },
@@ -157,20 +171,53 @@
 			uExpansionSpeed: { value: 0 },
 			uMaxRadius: { value: 0 },
 			uTexture: { value: null },
-			uAspect: { value: 1 }
+			uAspect: { value: 1 },
+			uRainCenters: { value: rainCenters },
+			uRainTimes: { value: rainTimes },
+			uRainStrengths: { value: rainStrengths }
+		};
+
+		let nextRainIndex = 0;
+		let timeSinceLastRain = 0;
+		let nextRainDelay = 0;
+		let lastTime = 0;
+
+		const spawnRaindrop = (
+			x: number,
+			y: number,
+			strength: number,
+			time: number
+		): void => {
+			rainCenters[nextRainIndex].set(x, y);
+			rainTimes[nextRainIndex] = time;
+			rainStrengths[nextRainIndex] = strength;
+			nextRainIndex = (nextRainIndex + 1) % MAX_RAIN_DROPS;
+		};
+
+		const isImageElement = (
+			img: unknown
+		): img is { width: number; height: number } => {
+			return (
+				img !== null &&
+				typeof img === 'object' &&
+				'width' in img &&
+				'height' in img
+			);
 		};
 
 		// Load image asynchronously
 		const textureLoader = new THREE.TextureLoader();
-		textureLoader.load(imageSrc, (texture) => {
+		textureLoader.load(imageSrc, (texture: THREE.Texture): void => {
 			if (uniforms) {
 				// Prevent texture stretching or pixelation mapping
 				texture.minFilter = THREE.LinearFilter;
 				uniforms.uTexture.value = texture;
 				// Get dimensions of image for display scaling
-				imgWidth = texture.image.width;
-				imgHeight = texture.image.height;
-				uniforms.uAspect.value = imgWidth / imgHeight;
+				if (isImageElement(texture.image)) {
+					imgWidth = texture.image.width;
+					imgHeight = texture.image.height;
+					uniforms.uAspect.value = imgWidth / imgHeight;
+				}
 			}
 		});
 
@@ -188,12 +235,13 @@
 		timer.connect(document);
 		let animationFrameId: number;
 
-		const animate = (timestamp: number) => {
+		const animate = (timestamp: number): void => {
 			animationFrameId = requestAnimationFrame(animate);
 			timer.update(timestamp);
 
 			if (uniforms) {
-				uniforms.uTime.value = timer.getElapsed();
+				const elapsed = timer.getElapsed();
+				uniforms.uTime.value = elapsed;
 				uniforms.uWaveFrequency.value = config.waveFrequency;
 				uniforms.uExpansionSpeed.value = config.expansionSpeed;
 				uniforms.uMaxRadius.value = config.maxRadius;
@@ -202,6 +250,26 @@
 					(targetDistortion - currentDistortion) * config.lerpFactor;
 				uniforms.uDistortionStrength.value = currentDistortion;
 				targetDistortion += (0.0 - targetDistortion) * 0.04; // Slower decay for water
+
+				// Ambient Rain Simulation
+				const dt = elapsed - lastTime;
+				lastTime = elapsed;
+
+				if (rainIntensity > 0) {
+					timeSinceLastRain += dt;
+					if (timeSinceLastRain >= nextRainDelay) {
+						// Spawn random drop on water (below horizonY=0.69)
+						const rx = Math.random();
+						const ry = Math.random() * 0.65;
+						const rStrength = rainStrength * (0.6 + Math.random() * 0.8);
+						spawnRaindrop(rx, ry, rStrength, elapsed);
+
+						// Randomize next interval to make it organic (Poisson-like)
+						const meanInterval = 1.0 / rainIntensity;
+						nextRainDelay = meanInterval * (0.4 + Math.random() * 1.2);
+						timeSinceLastRain = 0;
+					}
+				}
 			}
 
 			renderer.render(scene, camera);
@@ -209,12 +277,14 @@
 
 		animationFrameId = requestAnimationFrame(animate);
 
-		const resizeObserver = new ResizeObserver((entries) => {
-			for (const entry of entries) {
-				const { width, height } = entry.contentRect;
-				renderer.setSize(width, height, false);
+		const resizeObserver = new ResizeObserver(
+			(entries: ResizeObserverEntry[]): void => {
+				for (const entry of entries) {
+					const { width, height } = entry.contentRect;
+					renderer.setSize(width, height, false);
+				}
 			}
-		});
+		);
 		resizeObserver.observe(canvasElement);
 
 		return () => {
@@ -228,7 +298,7 @@
 		};
 	});
 
-	const handleCanvasClick = (event: MouseEvent) => {
+	const handleCanvasClick = (event: MouseEvent): void => {
 		if (!canvasElement || !uniforms) return;
 
 		const rect = canvasElement.getBoundingClientRect();
@@ -258,6 +328,36 @@
 	{#each SLIDER_DEFINITIONS as slider}
 		<RangeComponent {config} {slider} />
 	{/each}
+	<Col xs={12} sm={6}>
+		<FormGroup class="mb-0">
+			<Label>
+				Rain Intensity ({rainIntensity} drops/s)
+			</Label>
+			<Input
+				type="range"
+				label="Rain Intensity"
+				min={0}
+				max={10}
+				step={0.5}
+				bind:value={rainIntensity}
+			/>
+		</FormGroup>
+	</Col>
+	<Col xs={12} sm={6}>
+		<FormGroup class="mb-0">
+			<Label>
+				Rain Ripple Strength ({rainStrength})
+			</Label>
+			<Input
+				type="range"
+				label="Rain Ripple Strength"
+				min={0.01}
+				max={0.15}
+				step={0.005}
+				bind:value={rainStrength}
+			/>
+		</FormGroup>
+	</Col>
 </Row>
 
 <Row class="g-3 align-items-end">
