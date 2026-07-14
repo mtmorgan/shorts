@@ -65,7 +65,7 @@
 	const PRESETS: Record<string, { displayName: string; values: SplashConfig }> =
 		{
 			initial: {
-				displayName: 'Default',
+				displayName: 'Initial',
 				values: {
 					lerpFactor: 0.008,
 					distortionSpike: 0.07,
@@ -77,10 +77,10 @@
 			raindrop: {
 				displayName: '💧 Raindrop',
 				values: {
-					lerpFactor: 0.15,
-					distortionSpike: 0.02,
-					waveFrequency: 85.0,
-					expansionSpeed: 24.0,
+					lerpFactor: 0.021,
+					distortionSpike: 0.25,
+					waveFrequency: 150.0,
+					expansionSpeed: 6.0,
 					maxRadius: 0.04
 				}
 			},
@@ -95,14 +95,10 @@
 				}
 			}
 		};
-	let selectedPreset = $state(Object.keys(PRESETS)[0]);
-
+	const defaultPresetKey = Object.keys(PRESETS)[1];
+	let selectedPreset = $state(defaultPresetKey);
 	let config = $state<SplashConfig>({
-		lerpFactor: 0.05,
-		distortionSpike: 0.03,
-		waveFrequency: 45.0,
-		expansionSpeed: 15.0,
-		maxRadius: 0.1
+		...PRESETS[defaultPresetKey].values
 	});
 
 	let uniforms: {
