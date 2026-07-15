@@ -4,10 +4,10 @@ uniform float uAspect;
 
 uniform vec2 uSplashCenter;
 uniform float uClickTime;
-uniform float uDistortionStrength;
-uniform float uWaveFrequency;
-uniform float uExpansionSpeed;
-uniform float uMaxRadius;
+uniform float uStrength;
+uniform float uFrequency;
+uniform float uSpeed;
+uniform float uRadius;
 
 #define MAX_RAIN_DROPS 20
 uniform vec2 uRainCenters[MAX_RAIN_DROPS];
@@ -30,22 +30,22 @@ void main() {
   vec2 totalDisplacement = vec2(0.0);
 
   // 1. Splash from user clicks
-  if (uDistortionStrength > 0.0) {
+  if (uStrength > 0.0) {
     float timeSinceClick = uTime - uClickTime;
     if (timeSinceClick > 0.0 && timeSinceClick < 3.0) {
       vec2 uvDiff = vUv - uSplashCenter;
       vec2 perspectiveDiff = vec2(uvDiff.x * uAspect, uvDiff.y * depthScale);
       float dist = length(perspectiveDiff);
       if (dist > 0.0) {
-        float wavePhase = timeSinceClick * uExpansionSpeed - dist * uWaveFrequency;
+        float wavePhase = timeSinceClick * uSpeed - dist * uFrequency;
         float baseWave = sin(wavePhase);
 
-        float waveFrontSpeed = uExpansionSpeed / 45.0;
+        float waveFrontSpeed = uSpeed / 45.0;
         float waveFront = smoothstep(timeSinceClick * waveFrontSpeed + 0.1, timeSinceClick * waveFrontSpeed, dist);
         float wakeDecay = smoothstep(0.0, 0.4, timeSinceClick - dist);
-        float distanceMask = smoothstep(uMaxRadius, uMaxRadius * 0.7, dist);
+        float distanceMask = smoothstep(uRadius, uRadius * 0.7, dist);
 
-        float finalWave = baseWave * waveFront * wakeDecay * distanceMask * horizonMask * uDistortionStrength;
+        float finalWave = baseWave * waveFront * wakeDecay * distanceMask * horizonMask * uStrength;
         totalDisplacement += normalize(uvDiff) * finalWave;
       }
     }
@@ -62,14 +62,14 @@ void main() {
         vec2 perspectiveDiff = vec2(uvDiff.x * uAspect, uvDiff.y * depthScale);
         float dist = length(perspectiveDiff);
         if (dist > 0.0) {
-          float wavePhase = timeSinceRain * uExpansionSpeed - dist * uWaveFrequency;
+          float wavePhase = timeSinceRain * uSpeed - dist * uFrequency;
           float baseWave = sin(wavePhase);
 
-          float waveFrontSpeed = uExpansionSpeed / 45.0;
+          float waveFrontSpeed = uSpeed / 45.0;
           float waveFront = smoothstep(timeSinceRain * waveFrontSpeed + 0.1, timeSinceRain * waveFrontSpeed, dist);
           float wakeDecay = smoothstep(0.0, 0.4, timeSinceRain - dist) * (1.0 - smoothstep(0.0, 2.0, timeSinceRain));
-          float rainMaxRadius = uMaxRadius * 0.6;
-          float distanceMask = smoothstep(rainMaxRadius, rainMaxRadius * 0.7, dist);
+          float rainRadius = uRadius * 0.6;
+          float distanceMask = smoothstep(rainRadius, rainRadius * 0.7, dist);
 
           float finalWave = baseWave * waveFront * wakeDecay * distanceMask * horizonMask * rainStrength;
           totalDisplacement += normalize(uvDiff) * finalWave;

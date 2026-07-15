@@ -1,9 +1,13 @@
+import * as THREE from 'three';
+import type { IUniform } from 'three';
+
 export interface SplashConfig {
-	lerpFactor: number;
-	distortionSpike: number;
-	waveFrequency: number;
-	expansionSpeed: number;
-	maxRadius: number;
+	easing: number;
+	frequency: number;
+	speed: number;
+	radius: number;
+	intensity: number;
+	strength: number;
 }
 
 export interface SliderMetadata {
@@ -13,4 +17,20 @@ export interface SliderMetadata {
 	max: number;
 	step: number;
 	className?: string;
+}
+
+export interface Uniforms {
+	[key: string]: IUniform<any>;
+	uTime: { value: number };
+	uClickTime: { value: number };
+	uSplashCenter: { value: THREE.Vector2 };
+	uStrength: { value: number };
+	uFrequency: { value: number };
+	uSpeed: { value: number };
+	uRadius: { value: number };
+	uTexture: { value: THREE.Texture | null }; // Texture slot configuration
+	uAspect: { value: number };
+	uRainCenters: { value: THREE.Vector2[] };
+	uRainTimes: { value: number[] };
+	uRainStrengths: { value: number[] };
 }

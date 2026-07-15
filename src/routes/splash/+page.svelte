@@ -23,95 +23,77 @@
 	let imgHeight = $state(1);
 	let aspectRatioStyle = $derived(`aspect-ratio: ${imgWidth} / ${imgHeight};`);
 
-	const SLIDER_DEFINITIONS: SliderMetadata[] = [
-		{
-			key: 'lerpFactor',
-			label: 'Wave Speed / Easing',
-			min: 0.001,
-			max: 0.3,
-			step: 0.01
-		},
-		{
-			key: 'distortionSpike',
-			label: 'Ripple Height / Strength',
-			min: 0.01,
-			max: 0.25,
-			step: 0.01
-		},
-		{
-			key: 'waveFrequency',
-			label: 'Ring Density / Frequency',
-			min: 20.0,
-			max: 150.0,
-			step: 1.0
-		},
-		{
-			key: 'expansionSpeed',
-			label: 'Expansion Speed',
-			min: 5.0,
-			max: 50.0,
-			step: 0.5
-		},
-		{
-			key: 'maxRadius',
-			label: 'Maximum Radius',
-			min: 0.02,
-			max: 0.5,
-			step: 0.02
-		}
+	const SLIDERS: SliderMetadata[] = [
+		{ key: 'easing', label: 'Easing', min: 0.02, max: 0.3, step: 0.01 },
+		{ key: 'frequency', label: 'Frequency', min: 20.0, max: 150.0, step: 1.0 },
+		{ key: 'speed', label: 'Speed', min: 1.0, max: 10.0, step: 0.5 },
+		{ key: 'radius', label: 'Radius', min: 0.02, max: 0.5, step: 0.02 },
+		{ key: 'intensity', label: 'Drops / Second', min: 0, max: 30, step: 1 },
+		{ key: 'strength', label: 'Strength', min: 0, max: 0.25, step: 0.05 }
 	];
 
 	// Centralized Preset Registry (Easily add fields or new options here!)
 	const PRESETS: Record<string, { displayName: string; values: SplashConfig }> =
 		{
 			initial: {
-				displayName: 'Initial',
+				displayName: '💧 on Click',
 				values: {
-					lerpFactor: 0.008,
-					distortionSpike: 0.07,
-					waveFrequency: 85.0,
-					expansionSpeed: 24.0,
-					maxRadius: 0.1
+					easing: 0.02,
+					frequency: 150.0,
+					speed: 6.0,
+					radius: 0.4,
+					intensity: 0,
+					strength: 0.2
 				}
 			},
 			raindrop: {
-				displayName: '💧 Raindrop',
+				displayName: '💧 Rain',
 				values: {
-					lerpFactor: 0.021,
-					distortionSpike: 0.25,
-					waveFrequency: 150.0,
-					expansionSpeed: 6.0,
-					maxRadius: 0.04
+					easing: 0.021,
+					frequency: 150.0,
+					speed: 6.0,
+					radius: 0.04,
+					intensity: 10,
+					strength: 0.2
+				}
+			},
+			raindrops: {
+				displayName: '💧💧 Rain',
+				values: {
+					easing: 0.021,
+					frequency: 150.0,
+					speed: 6.0,
+					radius: 0.04,
+					intensity: 30,
+					strength: 0.4
 				}
 			},
 			bird: {
 				displayName: '🦆 Bird',
 				values: {
-					lerpFactor: 0.04,
-					distortionSpike: 0.09,
-					waveFrequency: 32.0,
-					expansionSpeed: 11.0,
-					maxRadius: 0.2
+					easing: 0.04,
+					frequency: 32.0,
+					speed: 11.0,
+					radius: 0.2,
+					intensity: 2,
+					strength: 0.5
 				}
 			}
 		};
-	const defaultPresetKey = Object.keys(PRESETS)[1];
+	const defaultPresetKey = Object.keys(PRESETS)[0];
 	let selectedPreset = $state(defaultPresetKey);
 	let config = $state<SplashConfig>({
 		...PRESETS[defaultPresetKey].values
 	});
 
-	let rainIntensity = $state(2.0); // raindrops per second. 0 to disable.
-	let rainStrength = $state(0.04); // height / distortion of raindrops.
-
 	let uniforms: {
 		uTime: { value: number };
 		uClickTime: { value: number };
 		uSplashCenter: { value: THREE.Vector2 };
-		uDistortionStrength: { value: number };
-		uWaveFrequency: { value: number };
-		uExpansionSpeed: { value: number };
-		uMaxRadius: { value: number };
+		uStrength: { value: number };
+		uFrequency: { value: number };
+		uSpeed: { value: number };
+		uRadius: { value: number };
 		uTexture: { value: THREE.Texture | null }; // Texture slot configuration
 		uAspect: { value: number };
 		uRainCenters: { value: THREE.Vector2[] };
@@ -166,10 +148,10 @@
 			uTime: { value: 0 },
 			uClickTime: { value: 0 },
 			uSplashCenter: { value: new THREE.Vector2(0.5, 0.5) },
-			uDistortionStrength: { value: 0 },
-			uWaveFrequency: { value: 0 },
-			uExpansionSpeed: { value: 0 },
-			uMaxRadius: { value: 0 },
+			uStrength: { value: 0 },
+			uFrequency: { value: 0 },
+			uSpeed: { value: 0 },
+			uRadius: { value: 0 },
 			uTexture: { value: null },
 			uAspect: { value: 1 },
 			uRainCenters: { value: rainCenters },
@@ -242,30 +224,31 @@
 			if (uniforms) {
 				const elapsed = timer.getElapsed();
 				uniforms.uTime.value = elapsed;
-				uniforms.uWaveFrequency.value = config.waveFrequency;
-				uniforms.uExpansionSpeed.value = config.expansionSpeed;
-				uniforms.uMaxRadius.value = config.maxRadius;
+				uniforms.uFrequency.value = config.frequency;
+				uniforms.uSpeed.value = config.speed;
+				uniforms.uRadius.value = config.radius;
 
 				currentDistortion +=
-					(targetDistortion - currentDistortion) * config.lerpFactor;
-				uniforms.uDistortionStrength.value = currentDistortion;
+					(targetDistortion - currentDistortion) * config.easing;
+				uniforms.uStrength.value = currentDistortion;
 				targetDistortion += (0.0 - targetDistortion) * 0.04; // Slower decay for water
 
 				// Ambient Rain Simulation
 				const dt = elapsed - lastTime;
 				lastTime = elapsed;
 
-				if (rainIntensity > 0) {
+				if (config.intensity > 0) {
 					timeSinceLastRain += dt;
 					if (timeSinceLastRain >= nextRainDelay) {
-						// Spawn random drop on water (below horizonY=0.69)
+						// Spawn random drop on water (below horizonY=0.69); rain is denser
+						// toward the horizon
 						const rx = Math.random();
-						const ry = Math.random() * 0.65;
-						const rStrength = rainStrength * (0.6 + Math.random() * 0.8);
+						const ry = 0.69 - Math.pow(Math.random(), 3.0) * 0.69;
+						const rStrength = config.strength * (0.6 + Math.random() * 0.8);
 						spawnRaindrop(rx, ry, rStrength, elapsed);
 
 						// Randomize next interval to make it organic (Poisson-like)
-						const meanInterval = 1.0 / rainIntensity;
+						const meanInterval = 1.0 / config.intensity;
 						nextRainDelay = meanInterval * (0.4 + Math.random() * 1.2);
 						timeSinceLastRain = 0;
 					}
@@ -307,7 +290,7 @@
 
 		uniforms.uSplashCenter.value.set(x, y);
 		uniforms.uClickTime.value = uniforms.uTime.value;
-		targetDistortion = config.distortionSpike;
+		targetDistortion = config.strength;
 	};
 </script>
 
@@ -320,44 +303,15 @@
 <p>
 	Here is a picture of the pond at <a href="ourplace">our place</a>. Clicking on
 	the image distorts it as though from a splash. A fish jumping? A kingbird
-	fishing? Mosquito larvae gasping for air? A methane bubble? The possiblities
-	are endless... This is a start at using GLSL (OpenGL Shading Language) to
-	explore the effects of light and reflection.
+	fishing? Mosquito larvae gasping for air? A methane bubble? Rain falling (even
+	though the sky is blue?)? The possiblities are endless... This is a start at
+	using GLSL (OpenGL Shading Language) to explore the effects of light and
+	reflection.
 </p>
 <Row class="g-3 mb-4">
-	{#each SLIDER_DEFINITIONS as slider}
+	{#each SLIDERS as slider}
 		<RangeComponent {config} {slider} />
 	{/each}
-	<Col xs={12} sm={6}>
-		<FormGroup class="mb-0">
-			<Label>
-				Rain Intensity ({rainIntensity} drops/s)
-			</Label>
-			<Input
-				type="range"
-				label="Rain Intensity"
-				min={0}
-				max={10}
-				step={0.5}
-				bind:value={rainIntensity}
-			/>
-		</FormGroup>
-	</Col>
-	<Col xs={12} sm={6}>
-		<FormGroup class="mb-0">
-			<Label>
-				Rain Ripple Strength ({rainStrength})
-			</Label>
-			<Input
-				type="range"
-				label="Rain Ripple Strength"
-				min={0.01}
-				max={0.15}
-				step={0.005}
-				bind:value={rainStrength}
-			/>
-		</FormGroup>
-	</Col>
 </Row>
 
 <Row class="g-3 align-items-end">
@@ -403,7 +357,7 @@
 	that march as armadas across the water when the light and wind are right. But
 	I'm not there yet. I've realized that what I might do is use an image (photo)
 	as a 'texture' and then write GLSL code to transform the image. Of course
-	Google Gemini wrote the first iteration of this.
+	Google Gemini helped and hindered with a lot of this.
 </p>
 
 <style>
