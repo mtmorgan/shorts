@@ -10,7 +10,7 @@
 	} from '@sveltestrap/sveltestrap';
 	import * as THREE from 'three';
 	import RangeComponent from './RangeComponent.svelte';
-	import type { SplashConfig, SliderMetadata } from './types';
+	import type { SplashConfig, SliderMetadata, Uniforms } from './types';
 
 	import imageSrc from './IMG_2524.jpeg';
 	import vertexShader from './shaders/vertex.glsl?raw';
@@ -24,8 +24,14 @@
 	let aspectRatioStyle = $derived(`aspect-ratio: ${imgWidth} / ${imgHeight};`);
 
 	const SLIDERS: SliderMetadata[] = [
-		{ key: 'easing', label: 'Easing', min: 0.02, max: 0.3, step: 0.01 },
-		{ key: 'frequency', label: 'Frequency', min: 20.0, max: 150.0, step: 1.0 },
+		{ key: 'easing', label: 'Easing', min: 0.02, max: 0.3, step: 0.05 },
+		{
+			key: 'frequency',
+			label: 'Frequency',
+			min: 100.0,
+			max: 2000.0,
+			step: 50.0
+		},
 		{ key: 'speed', label: 'Speed', min: 1.0, max: 10.0, step: 0.5 },
 		{ key: 'radius', label: 'Radius', min: 0.02, max: 0.5, step: 0.02 },
 		{ key: 'intensity', label: 'Drops / Second', min: 0, max: 30, step: 1 },
@@ -39,8 +45,8 @@
 				displayName: '💧 on Click',
 				values: {
 					easing: 0.02,
-					frequency: 150.0,
-					speed: 6.0,
+					frequency: 750.0,
+					speed: 3.0,
 					radius: 0.4,
 					intensity: 0,
 					strength: 0.2
@@ -49,12 +55,12 @@
 			raindrop: {
 				displayName: '💧 Rain',
 				values: {
-					easing: 0.021,
-					frequency: 150.0,
-					speed: 6.0,
+					easing: 0.02,
+					frequency: 1500.0,
+					speed: 2.0,
 					radius: 0.04,
 					intensity: 10,
-					strength: 0.2
+					strength: 0.05
 				}
 			},
 			raindrops: {
@@ -86,20 +92,7 @@
 		...PRESETS[defaultPresetKey].values
 	});
 
-	let uniforms: {
-		uTime: { value: number };
-		uClickTime: { value: number };
-		uSplashCenter: { value: THREE.Vector2 };
-		uStrength: { value: number };
-		uFrequency: { value: number };
-		uSpeed: { value: number };
-		uRadius: { value: number };
-		uTexture: { value: THREE.Texture | null }; // Texture slot configuration
-		uAspect: { value: number };
-		uRainCenters: { value: THREE.Vector2[] };
-		uRainTimes: { value: number[] };
-		uRainStrengths: { value: number[] };
-	} | null = null;
+	let uniforms: Uniforms | null = null;
 
 	let currentDistortion = 0;
 	let targetDistortion = 0;
@@ -135,7 +128,7 @@
 		});
 		renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-		const MAX_RAIN_DROPS = 20;
+		const MAX_RAIN_DROPS = 50;
 		const rainCenters = Array.from(
 			{ length: MAX_RAIN_DROPS },
 			() => new THREE.Vector2(0, 0)
