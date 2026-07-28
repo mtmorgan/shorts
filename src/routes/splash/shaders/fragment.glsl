@@ -8,6 +8,7 @@ uniform float uStrength;
 uniform float uFrequency;
 uniform float uSpeed;
 uniform float uRadius;
+uniform float uHole;
 
 #define MAX_RAIN_DROPS 50
 uniform vec2 uRainCenters[MAX_RAIN_DROPS];
@@ -36,7 +37,7 @@ void main() {
       vec2 uvDiff = vUv - uSplashCenter;
       vec2 perspectiveDiff = vec2(uvDiff.x * uAspect, uvDiff.y * depthScale);
       float dist = length(perspectiveDiff);
-      if (dist > 0.05) {
+      if (dist > uHole) {
         float wavePhase = timeSinceClick * uSpeed - dist * uFrequency;
         float baseWave = sin(wavePhase);
 
@@ -61,7 +62,7 @@ void main() {
         vec2 uvDiff = vUv - uRainCenters[i];
         vec2 perspectiveDiff = vec2(uvDiff.x * uAspect, uvDiff.y * depthScale);
         float dist = length(perspectiveDiff);
-        if (dist > 0.01) {
+        if (dist > uHole) {
           float wavePhase = timeSinceRain * uSpeed - dist * uFrequency;
           float baseWave = sin(wavePhase);
 

@@ -24,7 +24,7 @@
 	let aspectRatioStyle = $derived(`aspect-ratio: ${imgWidth} / ${imgHeight};`);
 
 	const SLIDERS: SliderMetadata[] = [
-		{ key: 'easing', label: 'Easing', min: 0.02, max: 0.3, step: 0.05 },
+		{ key: 'easing', label: 'Easing', min: 0.02, max: 0.3, step: 0.02 },
 		{
 			key: 'frequency',
 			label: 'Frequency',
@@ -34,6 +34,7 @@
 		},
 		{ key: 'speed', label: 'Speed', min: 1.0, max: 10.0, step: 0.5 },
 		{ key: 'radius', label: 'Radius', min: 0.02, max: 0.5, step: 0.02 },
+		{ key: 'hole', label: 'Hole (% of radius)', min: 0, max: 0.5, step: 0.05 },
 		{ key: 'intensity', label: 'Drops / Second', min: 0, max: 30, step: 1 },
 		{ key: 'strength', label: 'Strength', min: 0, max: 0.25, step: 0.05 }
 	];
@@ -42,14 +43,15 @@
 	const PRESETS: Record<string, { displayName: string; values: SplashConfig }> =
 		{
 			initial: {
-				displayName: '💧 on Click',
+				displayName: 'Click',
 				values: {
-					easing: 0.02,
-					frequency: 750.0,
-					speed: 3.0,
-					radius: 0.4,
+					easing: 0.06,
+					frequency: 100.0,
+					speed: 10.0,
+					radius: 0.5,
+					hole: 0,
 					intensity: 0,
-					strength: 0.2
+					strength: 0.25
 				}
 			},
 			raindrop: {
@@ -59,6 +61,7 @@
 					frequency: 1500.0,
 					speed: 2.0,
 					radius: 0.04,
+					hole: 0.2,
 					intensity: 10,
 					strength: 0.05
 				}
@@ -70,6 +73,7 @@
 					frequency: 150.0,
 					speed: 6.0,
 					radius: 0.04,
+					hole: 0.2,
 					intensity: 30,
 					strength: 0.4
 				}
@@ -80,7 +84,8 @@
 					easing: 0.04,
 					frequency: 32.0,
 					speed: 11.0,
-					radius: 0.2,
+					radius: 0.0,
+					hole: 0.1,
 					intensity: 2,
 					strength: 0.5
 				}
@@ -145,6 +150,7 @@
 			uFrequency: { value: 0 },
 			uSpeed: { value: 0 },
 			uRadius: { value: 0 },
+			uHole: { value: 0 },
 			uTexture: { value: null },
 			uAspect: { value: 1 },
 			uRainCenters: { value: rainCenters },
@@ -220,6 +226,7 @@
 				uniforms.uFrequency.value = config.frequency;
 				uniforms.uSpeed.value = config.speed;
 				uniforms.uRadius.value = config.radius;
+				uniforms.uHole.value = config.hole * config.radius;
 
 				currentDistortion +=
 					(targetDistortion - currentDistortion) * config.easing;

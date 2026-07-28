@@ -6,6 +6,7 @@ export interface SplashConfig {
 	frequency: number;
 	speed: number;
 	radius: number;
+	hole: number;
 	intensity: number;
 	strength: number;
 }
@@ -28,6 +29,7 @@ export interface Uniforms {
 	uFrequency: { value: number };
 	uSpeed: { value: number };
 	uRadius: { value: number };
+	uHole: { value: number };
 	uTexture: { value: THREE.Texture | null }; // Texture slot configuration
 	uAspect: { value: number };
 	uRainCenters: { value: THREE.Vector2[] };
