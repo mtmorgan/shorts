@@ -1,0 +1,58 @@
+# ==============================================================================
+# 1. DEPENDENCIES & BUILD ARTIFACTS
+# ==============================================================================
+node_modules/
+dist/
+build/
+.svelte-kit/                     # SvelteKit system files and compiled routing
+.vercel/                         # Vercel deployment cache (if applicable)
+.netlify/                        # Netlify deployment cache (if applicable)
+
+# ==============================================================================
+# 2. SVELTE 5 SPECIFIC GENERATED FILES
+# ==============================================================================
+# Ignore Svelte 5 runtime compiler output cached files
+.svelte-kit/output/              # Generated JS/CSS bundles
+generated/
+**/*.generated.ts
+
+# ==============================================================================
+# 3. THREE.JS & 3D GRAPHICS ASSETS (MASSIVE CONTEXT POLLUTION)
+# ==============================================================================
+# Keep code file structure visible, but block raw 3D assets and binary models
+static/models/
+static/textures/
+public/assets/
+
+# Ignore heavy graphics binary file types globally
+*.gltf
+*.glb
+*.obj
+*.fbx
+*.bin
+*.stl
+*.ply
+
+# Ignore high-resolution texture map images
+*.jpg
+*.jpeg
+*.png
+*.hdr
+*.exr
+*.webp
+*.svg
+
+# ==============================================================================
+# 4. SVELTESTRAP & BOOTSTRAP CACHES (IF COMPILED NATIVELY)
+# ==============================================================================
+# Prevents Gemini from parsing thousands of lines of raw CSS styles or icons
+static/bootstrap/
+**/*bootstrap*.min.css
+**/*bootstrap*.min.js
+
+# ==============================================================================
+# 5. ENVIRONMENT SECRETS & DOTENV
+# ==============================================================================
+.env
+.env.*
+!.env.example                   # Allow example keys so Gemini knows schema shapes

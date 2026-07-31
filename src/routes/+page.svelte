@@ -23,6 +23,13 @@
 	</ListGroupItem>
 
 	<ListGroupItem class="border-0 px-0">
+		<a href="./treebark" class="text-decoration-none">Tree Bark</a>
+		<span class="text-muted"
+			>— Identify trees from their bark; especially useful in winter.</span
+		>
+	</ListGroupItem>
+
+	<ListGroupItem class="border-0 px-0">
 		<a href="./mushrooms" class="text-decoration-none">Mushrooms</a>
 		<span class="text-muted"
 			>— A group of us walked through the property taking pictures of mushrooms.
@@ -37,6 +44,14 @@
 			cabin and listened to the birds using the amazing <a
 				href="https://merlin.allaboutbirds.org/">Merlin</a
 			> app. This is a summary of the birds we heard.</span
+		>
+	</ListGroupItem>
+
+	<ListGroupItem class="border-0 px-0">
+		<a href="./splash" class="text-decoration-none">Splash</a>
+		<span class="text-muted"
+			>— Sun reflecting on water creates all kinds of geometric patterns. Splash
+			introduces ripples onto the pond using GLSL (OpenGL Scripting Language).</span
 		>
 	</ListGroupItem>
 </ListGroup>
