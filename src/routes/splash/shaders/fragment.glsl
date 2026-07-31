@@ -23,10 +23,8 @@ void main() {
   float horizonMask = smoothstep(horizonY, horizonY * 0.9, vUv.y);
 
   // Perspective calculation
-  float distToHorizon = abs(vUv.y - horizonY);
-  float horizonDepth = 1.0 / (pow(distToHorizon, 2.0) * 18.5 + 0.02);
-  float foregroundBlend = smoothstep(2., 0.0, vUv.y);
-  float depthScale = mix(horizonDepth, 1.0, foregroundBlend);
+  float distToHorizon = 2. + 1. / abs(vUv.y - horizonY);
+  float depthScale = distToHorizon;
 
   vec2 totalDisplacement = vec2(0.0);
 

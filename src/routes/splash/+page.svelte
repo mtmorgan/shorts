@@ -58,24 +58,36 @@
 				displayName: '💧 Rain',
 				values: {
 					easing: 0.02,
-					frequency: 1500.0,
-					speed: 2.0,
+					frequency: 500.0,
+					speed: 6.0,
 					radius: 0.04,
 					hole: 0.2,
 					intensity: 10,
-					strength: 0.05
+					strength: 0.2
 				}
 			},
 			raindrops: {
 				displayName: '💧💧 Rain',
 				values: {
-					easing: 0.021,
-					frequency: 150.0,
+					easing: 0.02,
+					frequency: 500.0,
 					speed: 6.0,
 					radius: 0.04,
 					hole: 0.2,
 					intensity: 30,
 					strength: 0.4
+				}
+			},
+			methane: {
+				displayName: 'Methane',
+				values: {
+					easing: 0.02,
+					frequency: 250,
+					speed: 4.5,
+					radius: 0.5,
+					hole: 0.3,
+					intensity: 1,
+					strength: 0.2
 				}
 			},
 			bird: {
@@ -243,7 +255,7 @@
 						// Spawn random drop on water (below horizonY=0.69); rain is denser
 						// toward the horizon
 						const rx = Math.random();
-						const ry = 0.69 - Math.pow(Math.random(), 3.0) * 0.69;
+						const ry = 0.69 - Math.random() * 0.69;
 						const rStrength = config.strength * (0.6 + Math.random() * 0.8);
 						spawnRaindrop(rx, ry, rStrength, elapsed);
 
