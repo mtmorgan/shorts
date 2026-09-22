@@ -10,9 +10,9 @@
 		type ObserversResult
 	} from './utilities/queries';
 
-	import ObservationsCarousel from './ObservationsCarousel.svelte';
 	import ObservationsMap from './ObservationsMap.svelte';
 	import Observer from './Observer.svelte';
+	import ObservationsFilmstrip from './ObservationsFilmstrip.svelte';
 
 	// All observations, populated once in onMount
 	let allObservations = $state<ObservationResult[]>([]);
@@ -85,7 +85,7 @@
 	Click on the <img
 		alt="iNaturalist app icon"
 		src="https://github.com/inaturalist/inaturalist/blob/main/app/assets/images/bird.png?raw=true"
-		style="height: 1lh; width: auto; vertical-align: baseline;"
+		style="height: .9lh; width: auto; vertical-align: middle;"
 	/> icons when they appear to get the iNaturalist page for the observer or observations.
 </p>
 
@@ -99,7 +99,7 @@
 	{#if isLoading}
 		<div class="d-flex align-items-center gap-2 text-muted my-2">
 			<Spinner size="sm" type="border" color="primary" />
-			<span>Indexing contributors at our place...</span>
+			<span>Indexing observers at our place...</span>
 		</div>
 	{/if}
 
@@ -135,7 +135,7 @@
 	<p class="status">No observations for @{selectedUser} at our place.</p>
 {:else}
 	<Observer {observers} {selectedUser} />
-	<ObservationsCarousel {observations} />
+	<ObservationsFilmstrip {observations} />
 {/if}
 
 <ObservationsMap />

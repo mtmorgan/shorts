@@ -1,6 +1,15 @@
-export function tabulateById<T extends { id: number | string }>(
+/**
+ * Pluralizes a word based on a count.
+ */
+export const pluralize = (
+	count: number,
+	singular: string,
+	plural = `${singular}s`
+) => (count === 1 ? singular : plural);
+
+export const tabulateById = <T extends { id: number | string }>(
 	arr: T[]
-): Map<string | number, { observation_count: number; user: T }> {
+): Map<string | number, { observation_count: number; user: T }> => {
 	const map = new Map<
 		number | string,
 		{ observation_count: number; user: T }
@@ -16,4 +25,4 @@ export function tabulateById<T extends { id: number | string }>(
 	});
 
 	return map;
-}
+};
