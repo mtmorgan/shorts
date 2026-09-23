@@ -1,3 +1,5 @@
+import type { ObservationResult } from './queries';
+
 /**
  * Pluralizes a word based on a count.
  */
@@ -6,6 +8,15 @@ export const pluralize = (
 	singular: string,
 	plural = `${singular}s`
 ) => (count === 1 ? singular : plural);
+
+export const photoSrc = (
+	observation: ObservationResult,
+	size: undefined | 'small' | 'medium' | 'large'
+) => {
+	let src = observation.observation_photos[0].photo.url;
+	if (size !== undefined) src = src.replace('square.jpg', `${size}.jpg`);
+	return src;
+};
 
 export const tabulateById = <T extends { id: number | string }>(
 	arr: T[]

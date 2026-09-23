@@ -1,7 +1,9 @@
+import { type Point } from 'geojson';
 // Define primitive lookups for standard iNaturalist field schemas
 type iNatPrimitives = {
 	id: number;
 	uuid: string;
+	geojson: Point;
 	observed_on_string: string;
 	name: string;
 	preferred_common_name: string;

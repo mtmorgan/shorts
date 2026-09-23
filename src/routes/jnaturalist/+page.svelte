@@ -17,7 +17,6 @@
 	// All observations, populated once in onMount
 	let allObservations = $state<ObservationResult[]>([]);
 	let observers = $state<ObserversResult[]>([]);
-	$inspect(observers);
 	let selectedUserLogin = $state<string>('');
 
 	let selectedUser = $state<string>('');
@@ -45,7 +44,6 @@
 		try {
 			allObservations = await queryObservations();
 			observers = await queryObservers(allObservations);
-			console.log($state.snapshot(observers));
 		} catch (error) {
 			if (error instanceof HTTPError) {
 				errorMessage = `API Error (${error.response.status}): ${error.response.statusText}`;
@@ -138,7 +136,7 @@
 	<ObservationsFilmstrip {observations} />
 {/if}
 
-<ObservationsMap />
+<ObservationsMap {observations} />
 
 <h2>Implementation notes</h2>
 
