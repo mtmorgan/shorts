@@ -54,6 +54,14 @@
 			introduces ripples onto the pond using GLSL (OpenGL Scripting Language).</span
 		>
 	</ListGroupItem>
+
+	<ListGroupItem class="border-0 px-0">
+		<a href="./jnaturalist" class="text-decoration-none">jNaturalist</a>
+		<span class="text-muted"
+			>— Some of the plants and animals on our property recorded in iNaturalist
+			by Joan.</span
+		>
+	</ListGroupItem>
 </ListGroup>
 
 <h2>Implementation notes</h2>
