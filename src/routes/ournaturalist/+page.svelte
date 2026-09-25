@@ -60,10 +60,10 @@
 </script>
 
 <svelte:head>
-	<title>jNaturalist</title>
+	<title>Our Naturalists</title>
 </svelte:head>
 
-<h1>jNaturalist</h1>
+<h1>Our Naturalists</h1>
 
 <p>
 	We encounter all kinds of plants and animals when walking around <a
