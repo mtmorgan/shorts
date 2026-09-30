@@ -2,31 +2,35 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { resolve } from '$app/paths';
 
-	import maplibregl, { type LngLatLike } from 'maplibre-gl';
+	import maplibregl from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { getStyledMap } from '$lib/map/baseLayer';
 	import { getLotBounds } from '$lib/map/lotBoundaries';
 	import { addGeolocateControl } from '$lib/map/controls';
 	import Spiderfy from '@nazka/map-gl-js-spiderfy';
+	import type { Feature, FeatureCollection, GeoJsonProperties } from 'geojson';
 
-	import type { ObservationResult } from './utilities/queries';
-	import type { Feature, FeatureCollection, Point } from 'geojson';
+	import { controller } from './Controller.svelte';
 	import { photoSrc } from './utilities/algorithms';
 
+	const alpha = 1;
 	const ICON_PREFIX: string = resolve('/icons/' as any);
+	const CIRCLE_RADIUS = { unselected: 6, selected: 12 };
+	const CIRCLE_COLOR = {
+		unselected: `rgba(252, 141, 98, ${alpha})`,
+		selected: `rgba(102, 194, 165, ${alpha})`
+	};
 
-	let { observations }: { observations: ObservationResult[] } = $props();
-	const alpha = 0.7;
 	let geojson = $derived({
 		type: 'FeatureCollection',
-		features: observations.map(
-			(observation, index) =>
+		features: controller.observations.map(
+			(observation) =>
 				({
 					type: 'Feature',
 					geometry: observation.geojson,
 					properties: {
-						id: index,
-						color: `rgba(252, 141, 98, ${alpha})`,
+						id: observation.id,
+						color: CIRCLE_COLOR.unselected,
 						imageUrl: photoSrc(observation, 'large')
 					}
 				}) as Feature
@@ -38,8 +42,9 @@
 	let isImageViewing = $state(false);
 	let imageUrl: string = $state('');
 
-	const handleMarkerClick = (imgSrc: string) => {
-		imageUrl = imgSrc;
+	const handleMarkerClick = (properties: GeoJsonProperties) => {
+		imageUrl = properties!.imageUrl;
+		controller.id = properties!.id;
 		isImageViewing = false; // Reset to ensure transition restarts
 		// Use a short timeout to allow a browser paint frame before showing the modal
 		setTimeout(() => {
@@ -93,8 +98,9 @@
 				type: 'circle', // or 'symbol' if using an icon image
 				source: 'observations',
 				paint: {
-					'circle-radius': 6,
-					'circle-color': ['get', 'color']
+					// Sets a dynamic match statement looking at feature.properties.id
+					'circle-radius': CIRCLE_RADIUS.unselected,
+					'circle-color': CIRCLE_COLOR.unselected
 				}
 			});
 
@@ -146,8 +152,7 @@
 			map.addImage('observation-cluster', image, { sdf: true });
 
 			const spiderfy = new Spiderfy(map, {
-				onLeafClick: (feature) =>
-					handleMarkerClick(feature.properties.imageUrl),
+				onLeafClick: (feature) => handleMarkerClick(feature.properties),
 				closeOnLeafClick: false,
 				circleOptions: { leavesSeparation: 40 },
 				spiderLeavesPaint: {
@@ -166,7 +171,7 @@
 					const feature = features[0]; // Get the top-most feature
 					if (feature.properties && feature.properties.imageUrl) {
 						// It's an individual observation marker
-						handleMarkerClick(feature.properties.imageUrl);
+						handleMarkerClick(feature.properties);
 						e.preventDefault();
 					}
 				}
@@ -213,7 +218,30 @@
 			if (source) source.setData(geojson);
 		}
 	});
+
+	$effect(() => {
+		const id = controller.id;
+
+		if (mapReady && map) {
+			// This overwrites the layer calculation layout entirely, forcing a canvas repaint
+			map.setPaintProperty('observation-markers', 'icon-color', [
+				'case',
+				['==', ['get', 'id'], id ?? -1],
+				CIRCLE_COLOR.selected,
+				CIRCLE_COLOR.unselected
+			]);
+		}
+	});
 </script>
+
+{#if controller.observations.length > 0}
+	<p>
+		Points on the map are the locations where an observer has made observations.
+		Clicking on a point shows an image of the observation. The filmstrip scrolls
+		to show the species name, observation date, and a link to the iNaturalist
+		record. Click on the image to return to the map.
+	</p>
+{/if}
 
 <div class="map-wrapper">
 	<div id="map-container" class="map-container" bind:this={mapContainer}></div>

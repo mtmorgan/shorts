@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { FormGroup, Input, Alert, Spinner } from '@sveltestrap/sveltestrap';
 
 	import { HTTPError } from 'ky';
@@ -10,17 +10,18 @@
 		type ObserversResult
 	} from './utilities/queries';
 
+	import { controller } from './Controller.svelte';
+
 	import ObservationsMap from './ObservationsMap.svelte';
 	import Observer from './Observer.svelte';
 	import ObservationsFilmstrip from './ObservationsFilmstrip.svelte';
 
 	// All observations, populated once in onMount
-	let allObservations = $state<ObservationResult[]>([]);
+	let observations = $state<ObservationResult[]>([]);
 	let observers = $state<ObserversResult[]>([]);
 	let selectedUserLogin = $state<string>('');
 
 	let selectedUser = $state<string>('');
-	let observations = $state<ObservationResult[]>([]);
 	let isLoading = $state<boolean>(false);
 	let errorMessage = $state<string | null>(null);
 
@@ -28,11 +29,14 @@
 	async function handleUserSelection(event: Event) {
 		const target = event.target as HTMLSelectElement;
 		selectedUser = target.value;
-
 		if (!selectedUser) {
-			observations = [];
+			controller.observer = {} as ObserversResult;
+			controller.observations = [];
 		} else {
-			observations = allObservations.filter(
+			controller.observer = observers.filter(
+				(observer) => observer.user.login === selectedUser
+			)[0];
+			controller.observations = observations.filter(
 				(observation) => observation.user.login === selectedUser
 			);
 		}
@@ -42,8 +46,8 @@
 		// Observations and observers
 		isLoading = true;
 		try {
-			allObservations = await queryObservations();
-			observers = await queryObservers(allObservations);
+			observations = await queryObservations();
+			observers = await queryObservers(observations);
 		} catch (error) {
 			if (error instanceof HTTPError) {
 				errorMessage = `API Error (${error.response.status}): ${error.response.statusText}`;
@@ -51,7 +55,7 @@
 				errorMessage = 'A network or unexpected client error occurred.';
 			}
 			console.error('Fetch error:', error);
-			allObservations = [];
+			observations = [];
 			observers = [];
 		} finally {
 			isLoading = false;
@@ -129,14 +133,14 @@
 	<p class="error">{errorMessage}</p>
 {/if}
 
-{#if !isLoading && selectedUser && observations.length === 0 && !errorMessage}
+{#if !isLoading && selectedUser && controller.observations.length === 0 && !errorMessage}
 	<p class="status">No observations for @{selectedUser} at our place.</p>
 {:else}
-	<Observer {observers} {selectedUser} />
-	<ObservationsFilmstrip {observations} />
+	<Observer />
+	<ObservationsFilmstrip />
 {/if}
 
-<ObservationsMap {observations} />
+<ObservationsMap />
 
 <h2>Implementation notes</h2>
 

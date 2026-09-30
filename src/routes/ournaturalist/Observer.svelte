@@ -1,14 +1,7 @@
 <script lang="ts">
 	import { pluralize } from './utilities/algorithms';
-	import type { ObserversResult } from './utilities/queries';
-
-	let {
-		observers,
-		selectedUser
-	}: { observers: ObserversResult[]; selectedUser: string } = $props();
-	let observer = $derived(
-		observers.filter((observer) => observer.user.login === selectedUser)[0]
-	);
+	import { controller } from './Controller.svelte';
+	let observer = $derived(controller.observer);
 </script>
 
 {#if observer}

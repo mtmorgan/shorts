@@ -1,19 +1,22 @@
 <script lang="ts">
 	import { Container, Row, Col } from '@sveltestrap/sveltestrap';
-	import type { ObservationResult } from './utilities/queries';
 	import ObservationCard from './ObservationCard.svelte';
-
-	let { observations }: { observations: ObservationResult[] } = $props();
+	import { controller } from './Controller.svelte';
 </script>
 
-{#if observations.length > 0}
+{#if controller.observations.length > 0}
 	<h3>Observations</h3>
+	<p>
+		Scroll through the filmstrip to see observations. Click on a frame to see
+		the location of the image on the map. Click on the iNaturalist icon to visit
+		the record for the observation.
+	</p>
 
 	<Container fluid class="py-4">
 		<!-- Filmstrip Wrapper -->
 		<div class="filmstrip-container">
 			<Row class="flex-nowrap g-3">
-				{#each observations as observation}
+				{#each controller.observations as observation}
 					<Col xs="auto" class="filmstrip-item">
 						<ObservationCard {observation} />
 					</Col>
@@ -33,18 +36,6 @@
 		-webkit-overflow-scrolling: touch;
 	}
 
-	/* Define widths for your filmstrip frames */
-	:global(.filmstrip-item) {
-		width: 260px; /* Adjust item thickness */
-		scroll-snap-align: start;
-		display: inline-block;
-	}
-
-	:global(.filmstrip-img) {
-		height: 160px;
-		object-fit: cover;
-	}
-
 	/* Optional custom scrollbar design */
 	.filmstrip-container::-webkit-scrollbar {
 		height: 8px;
@@ -52,5 +43,11 @@
 	.filmstrip-container::-webkit-scrollbar-thumb {
 		background-color: #ccc;
 		border-radius: 4px;
+	}
+	/* Define widths for your filmstrip frames */
+	:global(.filmstrip-item) {
+		width: 260px; /* Adjust item thickness */
+		scroll-snap-align: start;
+		display: inline-block;
 	}
 </style>
