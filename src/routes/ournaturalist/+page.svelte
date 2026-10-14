@@ -144,6 +144,25 @@
 
 <h2>Implementation notes</h2>
 
+<p>
+	The new details here involve accessing the iNaturalist <a
+		href="https://api.inaturalist.org/v2/docs/">API</a
+	>, displaying images in a 'film strip', and coordinating clicks on the
+	filmstrip and map. API access uses the '<a
+		href="https://github.com/sindresorhus/ky">ky</a
+	>' module, chosen as not too complicated for the light-weight tasks I want to
+	do. The film strip implementation is CSS and primarily Google Gemini's doing.
+	I reused the 'controller' concept from an earlier project to coordinate the
+	film strip and map, with only a little help from Google.
+</p>
+
+<p>
+	One unsatisfactory element is that points that overlap sufficiently to
+	collapse into a cluster are not highlighted when clicked in the film strip;
+	maybe the map should zoom to a scale where the overlapping points no longer
+	overlap?
+</p>
+
 <style>
 	.status {
 		color: #555;
