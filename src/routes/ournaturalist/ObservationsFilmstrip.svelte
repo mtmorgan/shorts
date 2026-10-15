@@ -46,7 +46,7 @@
 	}
 	/* Define widths for your filmstrip frames */
 	:global(.filmstrip-item) {
-		width: 260px; /* Adjust item thickness */
+		width: 260px !important; /* Adjust item thickness */
 		scroll-snap-align: start;
 		display: inline-block;
 	}

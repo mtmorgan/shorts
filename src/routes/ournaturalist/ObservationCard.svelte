@@ -31,7 +31,14 @@
 	role="presentation"
 >
 	<Card class="h-100 shadow-sm">
-		<CardImg top {src} alt={observation.taxon.name} class="filmstrip-img" />
+		<CardImg
+			top
+			{src}
+			alt={observation.taxon.name}
+			class="filmstrip-img"
+			loading="lazy"
+			decoding="async"
+		/>
 		<CardBody class="p-2 w-100" style="min-width: 0;">
 			<p
 				class="m-0 text-break"
