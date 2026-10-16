@@ -39,8 +39,10 @@
 	"dependencies": {
 		"@nazka/map-gl-js-spiderfy": "^2.0.0",
 		"@sveltestrap/sveltestrap": "^7.1.0",
+		"@turf/boolean-point-in-polygon": "^7.4.0",
 		"d3": "^7.9.0",
 		"googleapis": "^173.0.0",
+		"ky": "^2.1.0",
 		"leaflet": "^1.9.4",
 		"leaflet.locatecontrol": "^0.85.1",
 		"leaflet.markercluster": "^1.5.3",

@@ -1,0 +1,175 @@
+<script lang="ts">
+	import { onMount } from 'svelte';
+	import { FormGroup, Input, Alert, Spinner } from '@sveltestrap/sveltestrap';
+
+	import { HTTPError } from 'ky';
+	import {
+		queryObservations,
+		queryObservers,
+		type ObservationResult,
+		type ObserversResult
+	} from './utilities/queries';
+
+	import { controller } from './Controller.svelte';
+
+	import ObservationsMap from './ObservationsMap.svelte';
+	import Observer from './Observer.svelte';
+	import ObservationsFilmstrip from './ObservationsFilmstrip.svelte';
+
+	// All observations, populated once in onMount
+	let observations = $state<ObservationResult[]>([]);
+	let observers = $state<ObserversResult[]>([]);
+	let selectedUserLogin = $state<string>('');
+
+	let selectedUser = $state<string>('');
+	let isLoading = $state<boolean>(false);
+	let errorMessage = $state<string | null>(null);
+
+	// Dropdown Change Handler
+	async function handleUserSelection(event: Event) {
+		const target = event.target as HTMLSelectElement;
+		selectedUser = target.value;
+		if (!selectedUser) {
+			controller.observer = {} as ObserversResult;
+			controller.observations = [];
+		} else {
+			controller.observer = observers.filter(
+				(observer) => observer.user.login === selectedUser
+			)[0];
+			controller.observations = observations.filter(
+				(observation) => observation.user.login === selectedUser
+			);
+		}
+	}
+
+	onMount(async () => {
+		// Observations and observers
+		isLoading = true;
+		try {
+			observations = await queryObservations();
+			observers = await queryObservers(observations);
+		} catch (error) {
+			if (error instanceof HTTPError) {
+				errorMessage = `API Error (${error.response.status}): ${error.response.statusText}`;
+			} else {
+				errorMessage = 'A network or unexpected client error occurred.';
+			}
+			console.error('Fetch error:', error);
+			observations = [];
+			observers = [];
+		} finally {
+			isLoading = false;
+		}
+	});
+</script>
+
+<svelte:head>
+	<title>Our Naturalists</title>
+</svelte:head>
+
+<h1>Our Naturalists</h1>
+
+<p>
+	We encounter all kinds of plants and animals when walking around <a
+		href="ourplace">our place</a
+	>. I use the <a href="https://www.inaturalist.org/">iNaturalist</a> app as a
+	kind of tricorder to find out the names of the things we see; Joan posts some
+	of her
+	<a href="https://www.inaturalist.org/observations?user_id=joanmontagnes"
+		>observations</a
+	>. In the past I thought 'naming things' seemed pretty pointless (maybe
+	because I was no good at it), and I resisted. But actually one starts to learn
+	about the world, and to be able to share the really bizzare things that nature
+	does.
+</p>
+
+<p>
+	Click on the <img
+		alt="iNaturalist app icon"
+		src="https://github.com/inaturalist/inaturalist/blob/main/app/assets/images/bird.png?raw=true"
+		style="height: .9lh; width: auto; vertical-align: middle;"
+	/> icons when they appear to get the iNaturalist page for the observer or observations.
+</p>
+
+<h2>iNaturalist observers</h2>
+
+{#if errorMessage}
+	<Alert color="danger">{errorMessage}</Alert>
+{/if}
+
+<FormGroup class="mb-4">
+	{#if isLoading}
+		<div class="d-flex align-items-center gap-2 text-muted my-2">
+			<Spinner size="sm" type="border" color="primary" />
+			<span>Indexing observers at our place...</span>
+		</div>
+	{/if}
+
+	<!-- Sveltestrap dynamic type="select" inputs binding standard onchange triggers -->
+	<Input
+		type="select"
+		id="observerSelect"
+		value={selectedUserLogin}
+		onchange={handleUserSelection}
+		disabled={isLoading || observers.length === 0}
+	>
+		<option value="">
+			{observers.length === 0 && !isLoading
+				? 'No observers found'
+				: '-- Select an observer --'}
+		</option>
+
+		{#each observers as item (item.user.id)}
+			<option value={item.user.login}>
+				{item.user.login}
+			</option>
+		{/each}
+	</Input>
+</FormGroup>
+
+<!-- State UI Layouts -->
+
+{#if errorMessage}
+	<p class="error">{errorMessage}</p>
+{/if}
+
+{#if !isLoading && selectedUser && controller.observations.length === 0 && !errorMessage}
+	<p class="status">No observations for @{selectedUser} at our place.</p>
+{:else}
+	<Observer />
+	<ObservationsFilmstrip />
+{/if}
+
+<ObservationsMap />
+
+<h2>Implementation notes</h2>
+
+<p>
+	The new details here involve accessing the iNaturalist <a
+		href="https://api.inaturalist.org/v2/docs/">API</a
+	>, displaying images in a 'film strip', and coordinating clicks on the
+	filmstrip and map. API access uses the '<a
+		href="https://github.com/sindresorhus/ky">ky</a
+	>' module, chosen as not too complicated for the light-weight tasks I want to
+	do. The film strip implementation is CSS and primarily Google Gemini's doing.
+	I reused the 'controller' concept from an earlier project to coordinate the
+	film strip and map, with only a little help from Google.
+</p>
+
+<p>
+	One unsatisfactory element is that points that overlap sufficiently to
+	collapse into a cluster are not highlighted when clicked in the film strip;
+	maybe the map should zoom to a scale where the overlapping points no longer
+	overlap?
+</p>
+
+<style>
+	.status {
+		color: #555;
+		font-style: italic;
+	}
+	.error {
+		color: #d32f2f;
+		font-weight: bold;
+	}
+</style>
