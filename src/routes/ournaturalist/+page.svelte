@@ -156,13 +156,6 @@
 	film strip and map, with only a little help from Google.
 </p>
 
-<p>
-	One unsatisfactory element is that points that overlap sufficiently to
-	collapse into a cluster are not highlighted when clicked in the film strip;
-	maybe the map should zoom to a scale where the overlapping points no longer
-	overlap?
-</p>
-
 <style>
 	.status {
 		color: #555;

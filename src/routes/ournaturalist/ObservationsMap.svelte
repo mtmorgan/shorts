@@ -13,6 +13,10 @@
 	import { controller } from './Controller.svelte';
 	import { photoSrc } from './utilities/algorithms';
 
+	const SOURCE_ID = 'observations';
+	const CLUSTER_LAYER_ID = 'observation-clusters';
+	const UNCLUSTERED_LAYER_ID = 'observation-markers';
+
 	const alpha = 1;
 	const ICON_PREFIX: string = resolve('/icons/' as any);
 	const CIRCLE_RADIUS = { unselected: 6, selected: 12 };
@@ -52,6 +56,72 @@
 		}, 20);
 	};
 
+	const handleMarkerSelection = async (id: number | null) => {
+		// Is the map, spider, and source initialized?
+		if (!mapReady || !map || !spiderfy) return;
+
+		const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource;
+		if (!source) return;
+
+		const data = (await source.getData()) as FeatureCollection;
+		if (!data || !data.features || data.features.length === 0) return;
+
+		// Query data features to find the marker's geographic coordinate
+		const targetFeature = data.features.find(
+			(f) => Number(f.properties?.id) === id
+		);
+		if (!targetFeature || targetFeature.geometry.type !== 'Point') {
+			console.error(`Marker ${id} not found or lacks geometry.`);
+			return;
+		}
+		const targetCoords = targetFeature.geometry.coordinates as [number, number];
+
+		// Clear previous spiderfication states before running actions
+		spiderfy.unspiderfyAll();
+
+		// Check if a cluster layer overlay is physically on top of this coordinate
+		const screenPoint = map.project(targetCoords);
+		const visibleClusters = map.queryRenderedFeatures(screenPoint, {
+			layers: [CLUSTER_LAYER_ID]
+		});
+
+		// Zoom to expanded cluster level, if necessary
+		if (visibleClusters.length > 0) {
+			const clusterFeature = visibleClusters[0];
+			const clusterId = clusterFeature.properties.cluster_id;
+
+			try {
+				// Await the promise directly instead of using a callback
+				const expansionZoom = await source.getClusterExpansionZoom(clusterId);
+				const maxMapZoom = map.getMaxZoom();
+
+				if (expansionZoom > maxMapZoom) {
+					// Fallback: Max zoom bounds hit. Fly there and spiderify.
+					map.easeTo({ center: targetCoords, zoom: maxMapZoom });
+					spiderfy.spiderfy(CLUSTER_LAYER_ID, clusterId);
+				} else {
+					// Action: Zoom in naturally to break the cluster apart
+					map.easeTo({ center: targetCoords, zoom: expansionZoom });
+				}
+			} catch (error) {
+				console.error('Failed to get cluster expansion zoom level:', error);
+			}
+		} else {
+			map.fitBounds(bounds);
+		}
+
+		// Stop displaying any previously seelected marker's image
+		isImageViewing = false;
+
+		// Highlight selected point
+		map.setPaintProperty(UNCLUSTERED_LAYER_ID, 'icon-color', [
+			'case',
+			['==', ['get', 'id'], id ?? -1],
+			CIRCLE_COLOR.selected,
+			CIRCLE_COLOR.unselected
+		]);
+	};
+
 	const closeZoom = () => {
 		isImageViewing = false;
 	};
@@ -60,14 +130,13 @@
 	let mapContainer: HTMLDivElement;
 	let map: maplibregl.Map;
 	let mapReady = $state(false);
+	let spiderfy = $state<Spiderfy | null>(null);
+	const bounds = getLotBounds();
 
 	onMount(async () => {
 		// Map style and bounds
 
 		const style = await getStyledMap(true);
-		const bounds = getLotBounds();
-
-		// Map
 
 		map = new maplibregl.Map({
 			container: mapContainer,
@@ -84,7 +153,7 @@
 		addGeolocateControl(map);
 
 		map.on('load', async () => {
-			map.addSource('observations', {
+			map.addSource(SOURCE_ID, {
 				type: 'geojson',
 				data: geojson,
 				// Enable clustering
@@ -96,7 +165,7 @@
 			map.addLayer({
 				id: 'observations-layer',
 				type: 'circle', // or 'symbol' if using an icon image
-				source: 'observations',
+				source: SOURCE_ID,
 				paint: {
 					// Sets a dynamic match statement looking at feature.properties.id
 					'circle-radius': CIRCLE_RADIUS.unselected,
@@ -105,9 +174,9 @@
 			});
 
 			map.addLayer({
-				id: 'observation-clusters',
+				id: CLUSTER_LAYER_ID,
 				type: 'symbol',
-				source: 'observations',
+				source: SOURCE_ID,
 				filter: ['has', 'point_count'], // Only show clusters
 				layout: {
 					'icon-image': 'observation-cluster',
@@ -117,9 +186,9 @@
 			});
 
 			map.addLayer({
-				id: 'observation-markers',
+				id: UNCLUSTERED_LAYER_ID,
 				type: 'symbol',
-				source: 'observations',
+				source: SOURCE_ID,
 				filter: ['!has', 'point_count'], // Individual markers (not clusters)
 				layout: {
 					'icon-image': 'observation-cluster',
@@ -133,7 +202,7 @@
 			map.addLayer({
 				id: 'observation-cluster-count',
 				type: 'symbol',
-				source: 'observations',
+				source: SOURCE_ID,
 				filter: ['has', 'point_count'],
 				layout: {
 					'text-field': '{point_count}',
@@ -151,7 +220,7 @@
 			);
 			map.addImage('observation-cluster', image, { sdf: true });
 
-			const spiderfy = new Spiderfy(map, {
+			spiderfy = new Spiderfy(map, {
 				onLeafClick: (feature) => handleMarkerClick(feature.properties),
 				closeOnLeafClick: false,
 				circleOptions: { leavesSeparation: 40 },
@@ -159,12 +228,12 @@
 					'icon-color': ['get', 'color']
 				}
 			});
-			spiderfy.applyTo('observation-clusters');
+			spiderfy.applyTo(CLUSTER_LAYER_ID);
 
 			map.on('click', (e) => {
 				// Query for rendered features at the click point
 				const features = map.queryRenderedFeatures(e.point, {
-					layers: ['observation-markers'] // Check this layers
+					layers: [UNCLUSTERED_LAYER_ID] // Check this layers
 				});
 
 				if (features.length > 0) {
@@ -213,24 +282,18 @@
 	});
 
 	$effect(() => {
-		if (mapReady && map && map.getSource('observations')) {
-			const source = map.getSource('observations') as maplibregl.GeoJSONSource;
-			if (source) source.setData(geojson);
+		// fired when geojson (controller.observations) changes
+		if (mapReady && map && map.getSource(SOURCE_ID)) {
+			const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource;
+			if (source) {
+				source.setData(geojson);
+				map.fitBounds(bounds);
+			}
 		}
 	});
 
 	$effect(() => {
-		const id = controller.id;
-
-		if (mapReady && map) {
-			// This overwrites the layer calculation layout entirely, forcing a canvas repaint
-			map.setPaintProperty('observation-markers', 'icon-color', [
-				'case',
-				['==', ['get', 'id'], id ?? -1],
-				CIRCLE_COLOR.selected,
-				CIRCLE_COLOR.unselected
-			]);
-		}
+		handleMarkerSelection(controller.id);
 	});
 </script>
 
